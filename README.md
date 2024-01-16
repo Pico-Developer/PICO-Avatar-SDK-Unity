@@ -1,5 +1,6 @@
 PICO Integration SDK is the main SDK for PICO development.It consists of XR SDK and Platform SDK.   
 This repo contains  Avatar SDK source code.
+It meets untiy’s structural requirements for packagemanager
 
 # Requirement
 
