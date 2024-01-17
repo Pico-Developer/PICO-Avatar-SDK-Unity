@@ -20,8 +20,8 @@ namespace Pico
 				{
 					{ AssetServerType.China, "https://avatar.picovr.com" },
 					{ AssetServerType.OverSea, "https://avatar-global.picovr.com" },
-					{ AssetServerType.Boe_China, "https://pico-avatar-boe.bytedance.net" },
-					{ AssetServerType.Boe_OverSea, "https://pico-avatar-i18n-boe.bytedance.net" },
+					{ AssetServerType.Boe_China, "https://avatar.picovr.com" },
+					{ AssetServerType.Boe_OverSea, "https://avatar-global.picovr.com" },
 				};
 
 

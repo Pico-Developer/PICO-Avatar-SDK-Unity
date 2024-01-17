@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System;
+using UnityEngine.Serialization;
 
 namespace Pico.Avatar
 {
@@ -10,7 +11,7 @@ namespace Pico.Avatar
 	public class AppSettings
 	{
 		/// <summary>
-		/// Whether to use Matrix avatarSDK service(We recommend you to use true)
+		/// Whether to use Matrix avatarSDK service(We recommend you to false when build apk, use true in PC)
 		/// </summary>
 		/// <remarks>
 		/// If checked, the libeffect.so and AvatarSDKScript.bytes in your project will be disabled.
@@ -18,8 +19,7 @@ namespace Pico.Avatar
 		/// If unchecked, your application will need to be updated manually with the release of the sdk version,
 		/// and unknown problems may occur if this is not done
 		/// </remarks>
-		[HideInInspector]
-		public bool usingMatrixService = true;
+		public bool localMode = true;
 
 		/// <summary>
 		/// Whether do garbage collection automatically

@@ -561,7 +561,7 @@ namespace Pico
 					if (AvatarEnv.avatarPackedPathFirst || thirdPackage)
 					{
 						MemoryView jsData = null;
-						byte[] matrixJS = DllLoaderHelper.GetMatrixJSBytes(appSettings.usingMatrixService);
+						byte[] matrixJS = DllLoaderHelper.GetMatrixJSBytes(!appSettings.localMode);
 						if (matrixJS != null)
 						{
 							jsData = new MemoryView(matrixJS, false);
@@ -746,7 +746,7 @@ namespace Pico
 					yield break;
 				}
 
-				DllLoaderHelper.InitDllLoader(appSettings.usingMatrixService);
+				DllLoaderHelper.InitDllLoader(!appSettings.localMode);
 
 				// Wait debugger when need debug c# on vr device.
 				if (false)
