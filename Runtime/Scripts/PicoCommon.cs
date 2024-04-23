@@ -385,6 +385,13 @@ namespace Pico
 			/// </summary>
 			Tooth_Base = 600,
 		}
+		
+		public enum OfficialShaderTheme
+		{
+			PicoPBR = 0,
+			PicoNPR = 1,
+			Invalid = 100
+		}
 
 		// Avatar scene blend type, parameter name is "_SceneBlendType"
 		internal enum AvatarSceneBlendType
@@ -537,7 +544,7 @@ namespace Pico
 
 			// version.
 			[MarshalAs(UnmanagedType.I1)] public byte version;
-			[MarshalAs(UnmanagedType.I1)] public byte reserveByte1;
+			[MarshalAs(UnmanagedType.I1)] public byte sRGB;
 			[MarshalAs(UnmanagedType.I1)] public byte reserveByte2;
 			[MarshalAs(UnmanagedType.I1)] public byte reserveByte3;
 
@@ -735,7 +742,7 @@ namespace Pico
 		public struct MeshData
 		{
 			[MarshalAs(UnmanagedType.I1)] public byte version;
-			[MarshalAs(UnmanagedType.I1)] public byte reserve1;
+			[MarshalAs(UnmanagedType.I1)] public byte useCustomMaterial;
 			[MarshalAs(UnmanagedType.I1)] public byte reserve2;
 			[MarshalAs(UnmanagedType.I1)] public byte reserve3;
 			[MarshalAs(UnmanagedType.I4)] public uint reserveInt1;

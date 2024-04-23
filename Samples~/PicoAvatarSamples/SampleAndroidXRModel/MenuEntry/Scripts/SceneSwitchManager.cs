@@ -8,8 +8,6 @@ namespace Pico.Avatar.Sample
 {
     public class SceneSwitchManager : MonoBehaviour
     {
-        public List<Button> sceneEntryButton = new();
-        
         public GameObject buttonItem;
         public Transform menuRoot;
         public SceneDescription sceneDescConfigs;

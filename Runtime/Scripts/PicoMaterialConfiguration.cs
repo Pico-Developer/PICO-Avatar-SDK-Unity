@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Pico
 {
@@ -27,20 +28,35 @@ namespace Pico
 
 			public RenderPipelineType renderPipelineType;
 
+			
 			/// <summary>
-			/// lod materials. application maybe need add some more properties.
+			/// Official lod PBR materials. application maybe need add some more properties.
 			/// </summary>
-			public Material lodMaterial0;
-
-			public Material lodMaterial1;
-			public Material lodMaterial2;
-			public Material lodMaterial3;
-			public Material lodMaterial4;
+			[Header("PBR Material Config")]
+			public Material lodPBRMaterial0;
+			public Material lodPBRMaterial1;
+			public Material lodPBRMaterial2;
+			public Material lodPBRMaterial3;
+			public Material lodPBRMaterial4;
+			
+			/// <summary>
+			/// Official lod NPR materials. application maybe need add some more properties.
+			/// </summary>
+			[Header("NPR Material Config")]
+			public Material lodNPRMaterial0;
+			public Material lodNPRMaterial1;
+			public Material lodNPRMaterial2;
+			public Material lodNPRMaterial3;
+			public Material lodNPRMaterial4;
+			
+			[Header("other Material or Shader")]
 			public Shader avatarBunchShader;
 			public Material hairKKMaterial0;
 
+			
 			public ShaderVariantCollection shaderVariantCollection;
 
+			[Header("other property")]
 			/// <summary>
 			/// Whether need tangent data.  If need pbr/normal map, should set true.
 			/// </summary>
@@ -110,7 +126,7 @@ namespace Pico
 			/// </summary>
 			/// <param name="nativeMaterial">Source material</param>
 			/// <param name="material">Target material</param>
-			public void ApplyToMaterial(PicoAvatarRenderMaterial nativeMaterial, Material material)
+			public void ApplyToMaterial(PicoAvatarRenderMaterial nativeMaterial, Material material)// fix name
 			{
 				// set float properties
 				UpdateToUniformsMaterial(nativeMaterial, material);
@@ -150,11 +166,11 @@ namespace Pico
 			/// <param name="nativeMaterial">Source material</param>
 			/// <param name="lodLevel">current lodLevel</param>
 			/// <returns>unity material</returns>
-			public virtual Material ApplyToMaterial(PicoAvatarRenderMaterial nativeMaterial, AvatarLodLevel lodLevel)
+			public virtual Material CreateRuntimeMaterialFromNativeMaterial(PicoAvatarRenderMaterial nativeMaterial, AvatarLodLevel lodLevel) // fix name: create material 
 			{
 				CheckPrepareConfiguration(nativeMaterial);
 				//
-				var material = new Material(SelectMaterial(nativeMaterial.mat_ShaderType, lodLevel));
+				var material = new Material(SelectMaterial(nativeMaterial.mat_ShaderType, nativeMaterial.mat_ShaderTheme, lodLevel));
 
 				return material;
 			}
@@ -209,7 +225,7 @@ namespace Pico
 			}
 
 			// Select material.
-			protected virtual Material SelectMaterial(AvatarShaderType shaderType, AvatarLodLevel lodLevel)
+			protected virtual Material SelectMaterial(AvatarShaderType shaderType, OfficialShaderTheme shaderTheme, AvatarLodLevel lodLevel)
 			{
 				switch (shaderType)
 				{
@@ -224,33 +240,62 @@ namespace Pico
 					default:
 						break;
 				}
-
-				if (lodMaterial4 != null && (int)AvatarLodLevel.Count > 3 && lodLevel > (AvatarLodLevel)3)
+				if (shaderTheme == OfficialShaderTheme.PicoPBR)
 				{
-					return lodMaterial4;
+					if (lodPBRMaterial4 != null && (int)AvatarLodLevel.Count > 3 && lodLevel > (AvatarLodLevel)3)
+					{
+						return lodPBRMaterial4;
+					}
+					else if (lodPBRMaterial3 != null && lodLevel > AvatarLodLevel.Lod2)
+					{
+						return lodPBRMaterial3;
+					}
+					else if (lodPBRMaterial2 != null && lodLevel > AvatarLodLevel.Lod1)
+					{
+						return lodPBRMaterial2;
+					}
+					else if (lodPBRMaterial1 != null && lodLevel > AvatarLodLevel.Lod0)
+					{
+						return lodPBRMaterial1;
+					}
+					else if (lodPBRMaterial0 != null)
+					{
+						return lodPBRMaterial0;
+					}
 				}
-				else if (lodMaterial3 != null && lodLevel > AvatarLodLevel.Lod2)
+				else if (shaderTheme == OfficialShaderTheme.PicoNPR)
 				{
-					return lodMaterial3;
-				}
-				else if (lodMaterial2 != null && lodLevel > AvatarLodLevel.Lod1)
-				{
-					return lodMaterial2;
-				}
-				else if (lodMaterial1 != null && lodLevel > AvatarLodLevel.Lod0)
-				{
-					return lodMaterial1;
+					if (lodNPRMaterial4 != null && (int)AvatarLodLevel.Count > 3 && lodLevel > (AvatarLodLevel)3)
+					{
+						return lodNPRMaterial4;
+					}
+					else if (lodNPRMaterial3 != null && lodLevel > AvatarLodLevel.Lod2)
+					{
+						return lodNPRMaterial3;
+					}
+					else if (lodNPRMaterial2 != null && lodLevel > AvatarLodLevel.Lod1)
+					{
+						return lodNPRMaterial2;
+					}
+					else if (lodNPRMaterial1 != null && lodLevel > AvatarLodLevel.Lod0)
+					{
+						return lodNPRMaterial1;
+					}
+					else if (lodNPRMaterial0 != null)
+					{
+						return lodNPRMaterial0;
+					}
 				}
 
 				// at least material0 should be configured.
-				return lodMaterial0;
+				return lodPBRMaterial0;
 			}
 
 			protected void CheckPrepareConfiguration(PicoAvatarRenderMaterial nativeMaterial)
 			{
-				if (lodMaterial0 == null)
+				if (lodPBRMaterial0 == null)
 				{
-					lodMaterial0 = new Material(Shader.Find("PAV/URP/DiffuseSpec"));
+					lodPBRMaterial0 = new Material(Shader.Find("PAV/URP/PicoPBR"));
 				}
 
 				CheckInitialize(nativeMaterial);

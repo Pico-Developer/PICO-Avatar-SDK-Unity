@@ -241,6 +241,33 @@ namespace Pico
 				gcXFormsHandle.Free();
 			}
 
+			/// <summary>
+			/// In body tracking mode, call this function to enable or disable body tracking at run time.
+			/// </summary>
+			/// <param name="enabled">true - enable, false - disable</param>
+			public void SetUseBodyTracking(bool useBodyTracking)
+			{
+				isUsingBodyTracking = useBodyTracking;
+
+				// If using body tracking, disable IK; otherwise enable IK.
+				if (_bipedIKController != null)
+				{
+					_bipedIKController.SetAllIKEnable(!isUsingBodyTracking);
+					_bipedIKController.SetIKEnable(IKEffectorType.Hips, false);
+				}
+
+				// If using body tracking, disable AutoFit; otherwise enable AutoFit.
+				if (autoFitController != null)
+				{
+					autoFitController.localAvatarHeightFittingEnable = !isUsingBodyTracking;
+				}
+
+				if (_rmiObject != null)
+				{
+					_rmiObject.SetUseBodyTracking(isUsingBodyTracking);
+				}
+			}
+
 			/// gets avatar transform in remote net package
 			internal XForm GetRemotePackageAvatarXForm()
 			{
@@ -917,29 +944,6 @@ namespace Pico
 				gcHandle.Free();
 				GetRemotePackageJointLayer();
 				GetRemotePackageBlendShapeLayer();
-			}
-
-			// In body tracking mode, call this function to enable or disable body tracking at run time.
-			private void SetUseBodyTracking(bool useBodyTracking)
-			{
-				isUsingBodyTracking = useBodyTracking;
-
-				// If using body tracking, disable IK; otherwise enable IK.
-				if (_bipedIKController != null)
-				{
-					_bipedIKController.SetAllIKEnable(!isUsingBodyTracking);
-				}
-
-				// If using body tracking, disable AutoFit; otherwise enable AutoFit.
-				if (autoFitController != null)
-				{
-					autoFitController.localAvatarHeightFittingEnable = !isUsingBodyTracking;
-				}
-
-				if (_rmiObject != null)
-				{
-					_rmiObject.SetUseBodyTracking(isUsingBodyTracking);
-				}
 			}
 
 			#endregion

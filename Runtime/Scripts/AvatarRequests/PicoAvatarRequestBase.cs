@@ -10,14 +10,6 @@
 			}
 
 			/// <summary>
-			/// request id is the same as invoker instance id.
-			/// </summary>
-			public long requestId
-			{
-				get => (long)instanceId;
-			}
-
-			/// <summary>
 			/// Gets next local instance id.
 			/// </summary>
 			/// <returns></returns>

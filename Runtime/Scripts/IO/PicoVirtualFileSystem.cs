@@ -6,9 +6,7 @@ namespace Pico
 	{
 		namespace IO
 		{
-			/// <summary>
-			/// Archive file system. ONLY used internally.
-			/// </summary>
+			//Archive file system. ONLY used internally.
 			public class ArchiveFileSystem : NativeObject
 			{
 				#region Public Methods
@@ -28,11 +26,7 @@ namespace Pico
 					return pav_ArchiveFileSystem_Load(nativeHandle, archiveFilePathName);
 				}
 
-				/// <summary>
-				/// Load from bytes.
-				/// </summary>
-				/// <param name="bytesData"></param>
-				/// <returns></returns>
+				// Load from bytes.
 				public NativeResult LoadFromBytes(byte[] bytesData)
 				{
 					var mv = new MemoryView(bytesData, false);
@@ -41,9 +35,7 @@ namespace Pico
 					return result;
 				}
 
-				/// <summary>
-				/// Archive specified files to a archive file.
-				/// </summary>
+				// Archive specified files to a archive file.
 				/// <param name="srcDirPathName"></param>
 				/// <param name="targetFilePathName">output file path name.</param>
 				/// <param name="fileNames">file name list relative to srcDirPathName and seperated with '|'.</param>

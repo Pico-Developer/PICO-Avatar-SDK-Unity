@@ -28,7 +28,7 @@ namespace Pico
                     _characterRoot = characterRoot;
 
                     var preview = avatarData.Value<JArray>("avatar_preview_keys");
-                    if (preview is { Count: > 2 })
+                    if (preview != null && preview.Count > 2)
                     {
                         LoadTextureByUrl(preview[2].Value<string>("preview_url"));
                     }

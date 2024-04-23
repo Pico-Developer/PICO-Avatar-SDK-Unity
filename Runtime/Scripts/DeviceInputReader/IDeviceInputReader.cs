@@ -64,6 +64,8 @@ namespace Pico
 
 			public float deviceArmSpan = 1.0f;
 
+			public bool isAvatarHubMode { set; get; } = false;
+			
 			protected Vector3[] deviceOffsets = new Vector3[(int)DeviceType.Count];
 			protected Quaternion[] deviceRotationOffsets = new Quaternion[(int)DeviceType.Count];
 

@@ -67,14 +67,6 @@ namespace Pico.Avatar.Sample
             var action = GameObject.Find("XRActionCanvas");
             action.GetComponent<XRAnimationAction>().InitController(controlAnim);
         }
-
-#if UNITY_EDITOR
-        protected override void OnPicoAvatarAppStartTestModel()
-        {
-            this.UserServiceUserID = PicoAvatarPlatformInfoTestModelUtils.UserID;
-        }
-#endif
-
     }
 }
 

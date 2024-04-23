@@ -38,14 +38,6 @@ namespace Pico.Avatar.Sample
                 picoAvatarIKPanel.SetAvatarIKDemo(this);
             }
         }
-
-#if UNITY_EDITOR
-        protected override void OnPicoAvatarAppStartTestModel()
-        {
-            base.OnPicoAvatarAppStartTestModel();
-            this.UserServiceUserID = PicoAvatarPlatformInfoTestModelUtils.UserID;
-        }
-#endif
         IEnumerator Start()
         {
             this.PXRCheck();

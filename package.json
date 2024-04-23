@@ -1,9 +1,9 @@
 {
   "name": "org.byted.avatar.sdk",
   "displayName": "PICO Avatar",
-  "version": "1.0.0",
-  "unity": "2021.3",
-  "description": "Provides rich and colorful avatar support to easily realize a vivid virtual avatar",
+  "version": "2.0.0",
+  "unity": "2020.3",
+  "description": "Provides a range of features, components, and scripts covering rendering, interaction, sensing, platform services, and more.",
   "keywords": [
     "pico",
     "avatar",
@@ -15,7 +15,7 @@
     "com.unity.modules.uielements": "1.0.0",
     "com.unity.mathematics": "1.2.6",
     "com.unity.nuget.newtonsoft-json": "3.2.1",
-    "com.unity.render-pipelines.universal": "12.1.7"
+    "com.unity.render-pipelines.universal": "10.6.0"
   },
   "samples": [
     {
@@ -24,10 +24,5 @@
       "path": "Samples~/PicoAvatarSamples"
     }
   ],
-  "unityRelease": "21f1",
-  "author": {
-    "name": "Jinmingfei",
-    "email": "Jinmingfei@bytedance.com",
-    "url": "https://developer-cn.pico-interactive.com/sdk?deviceId=1&platformId=1&itemId=12"
-  }
+  "unityRelease": "21f1"
 }

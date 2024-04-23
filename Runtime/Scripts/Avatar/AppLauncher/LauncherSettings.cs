@@ -11,17 +11,6 @@ namespace Pico.Avatar
 	public class AppSettings
 	{
 		/// <summary>
-		/// Whether to use Matrix avatarSDK service(We recommend you to false when build apk, use true in PC)
-		/// </summary>
-		/// <remarks>
-		/// If checked, the libeffect.so and AvatarSDKScript.bytes in your project will be disabled.
-		/// Your application will use system services (your application will be hot updated by Matrix for the underlying sdk libraries).
-		/// If unchecked, your application will need to be updated manually with the release of the sdk version,
-		/// and unknown problems may occur if this is not done
-		/// </remarks>
-		public bool localMode = true;
-
-		/// <summary>
 		/// Whether do garbage collection automatically
 		/// </summary>
 		public bool autoGarbageCollection;
@@ -66,8 +55,10 @@ namespace Pico.Avatar
 		/// BodyTracking >= 2.6.0
 		/// Avatar Bake >= 2.7.0
 		/// Standardize & reform >= 2.8.0
+		/// IKRefactor & AutoLod >= 2.8.1
+		/// MeshSocket & Studio >= 2.8.5
 		/// </summary>
-		[NonSerialized] public const string avatarSdkVersion = "2.8.0";
+		[NonSerialized] public const string avatarSdkVersion = "2.8.5";
 
 		/// <summary>
 		/// the unity plugin commit.
@@ -78,31 +69,40 @@ namespace Pico.Avatar
 		/// Version of under level avatar sdk. It should be get from native library.
 		/// </summary>
 		[NonSerialized] public string avatarCoreVersion;
+
+		/// <summary>
+		/// Version of minimum rom version
+		/// </summary>
+		[NonSerialized] public string minRomVersion = "5.6.0";
+
+		/// <summary>
+		/// Version of minimum matrix version
+		/// </summary>
+		[NonSerialized] public string minMatrixVersion = "6.0.0";
 	}
 
 	/// <summary>
 	///Login Settings
 	/// </summary>
-	[Serializable]
 	public class LoginSettings
 	{
 		/// <summary>
 		/// for internal test
 		/// </summary>
-		public string userID;
+		public string userID = "";
 
 		/// <summary>
 		/// The user's unique identifier, which belongs to the SDK initialization parameter,
 		/// which can be obtained through PlatformSDK
 		/// </summary>
-		public string accessToken;
+		public string accessToken = "";
 
 		/// <summary>
 		/// The StoreRegion when the user registers belongs to the SDK initialization parameter,
 		/// which can be obtained through PlatformSDK
 		/// </summary>
-		[Obsolete]
-		private string nationType;
+		///for internal avatareditor use
+		public string nationType = "";
 	}
 
 	/// <summary>
@@ -131,6 +131,9 @@ namespace Pico.Avatar
 	[Serializable]
 	public class AvatarRenderSettings
 	{
+        public bool useCustomMaterial;
+        public AvatarCustomMaterialDataBase customMaterialDatabase;
+
 		/// <summary>
 		/// Whether to turn off image mesh batch processing
 		/// </summary>

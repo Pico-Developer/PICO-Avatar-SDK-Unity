@@ -202,7 +202,7 @@ namespace Pico
 				}
 
 				//
-				return _primitiveRenderMesh.BuildMaterialsFromNative(GetRenderMaterialHandles(), lodLevel, false);
+				return _primitiveRenderMesh.BuildOfficialMaterialsFromNative(GetRenderMaterialHandles(), lodLevel, false);
 			}
             
             //Native handle for render material of the primitive.

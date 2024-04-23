@@ -37,7 +37,9 @@ namespace Pico.Avatar
 						break;
 					case RuntimePlatform.LinuxPlayer:
 					case RuntimePlatform.LinuxEditor:
+#if UNITY_2021_3_OR_NEWER
 					case RuntimePlatform.LinuxServer:
+#endif
 						prefix = "lib";
 						suffix = "so";
 						break;
@@ -82,6 +84,11 @@ namespace Pico.Avatar
 
 			return data;
 		}
+
+		public static void HandleLackMethod(string desc, bool shouldPopDialog)
+		{
+			pav_HandleLackMethod(desc, shouldPopDialog);
+		}
 		//void Test()
 		//{
 		//    NativeArrayData data = new NativeArrayData(); ;
@@ -109,6 +116,9 @@ namespace Pico.Avatar
 
 		[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
 		private static extern int pav_GetJSAssetLength();
+
+		[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+		private static extern int pav_HandleLackMethod(string desc, bool shouldPopDialog);
 
 		#endregion
 	}

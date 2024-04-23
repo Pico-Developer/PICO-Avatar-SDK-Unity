@@ -67,8 +67,8 @@ namespace Pico.Avatar.Sample
         };
        
         
-        public List<Text> menuGo = new();
-        public List<Slider> menuSlider = new();
+        public List<Text> menuGo = new List<Text>();
+        public List<Slider> menuSlider = new List<Slider>();
         public Text deviceInfo;
         public Text loadingState;
         

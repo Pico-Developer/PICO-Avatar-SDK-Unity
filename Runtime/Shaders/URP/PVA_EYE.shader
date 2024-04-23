@@ -33,7 +33,7 @@
 
         Pass
         {
-            Cull Front
+            Cull Back
             HLSLPROGRAM
             #pragma target 4.5
 			//#pragma multi_compile _ PAV_VERTEX_FROM_BUFFER

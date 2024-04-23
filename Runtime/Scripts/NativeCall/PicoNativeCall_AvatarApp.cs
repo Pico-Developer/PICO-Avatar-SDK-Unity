@@ -68,35 +68,19 @@
 				return netStats;
 			}
 
-			public void SetTraceNativeCaller(bool trace)
-			{
-				var args = this._method_SetTraceNativeCaller.invokeArgumentTable;
-				args.SetBoolParam(0, trace);
-				this._method_SetTraceNativeCaller.DoApply();
-			}
-
 			public void GarbageCollection(uint gcLevel)
 			{
 				var args = this._method_GarbageCollection.invokeArgumentTable;
 				args.SetUIntParam(0, (uint)gcLevel);
 				this._method_GarbageCollection.DoApply();
 			}
-
-			public void SendMessage(string msg)
+			
+			public void SetEnableAvatarTracker(bool enableTrace)
 			{
-				var args = this._method_SendMessage.invokeArgumentTable;
-				args.SetStringParam(0, msg);
-				this._method_SendMessage.DoApply();
-			}
-
-#if PAV_INTERNAL_DEV
-			public void SetEnableAvatarTracer(bool enableTrace)
-			{
-				var args = this._method_SetEnableAvatarTracer.invokeArgumentTable;
+				var args = this._method_SetEnableAvatarTracker.invokeArgumentTable;
 				args.SetBoolParam(0, enableTrace);
-				this._method_SetEnableAvatarTracer.DoApply();
+				this._method_SetEnableAvatarTracker.DoApply();
 			}
-#endif
 
 			#endregion
 
@@ -163,10 +147,8 @@
 					this._method_SetDebugConfig = AddCallerMethod(_attribute_SetDebugConfig);
 					this._method_SetDebugLogMasks = AddCallerMethod(_attribute_SetDebugLogMasks);
 					this._method_GetNetStats = AddCallerMethod(_attribute_GetNetStats);
-					this._method_SetTraceNativeCaller = AddCallerMethod(_attribute_SetTraceNativeCaller);
 					this._method_GarbageCollection = AddCallerMethod(_attribute_GarbageCollection);
-					this._method_SendMessage = AddCallerMethod(_attribute_SendMessage);
-					this._method_SetEnableAvatarTracer = AddCallerMethod(_attribute_SetEnableAvatarTracer);
+					this._method_SetEnableAvatarTracker = AddCallerMethod(_attribute_SetEnableAvatarTracker);
 				}
 			}
 
@@ -180,10 +162,8 @@
 			private NativeCaller _method_SetDebugConfig;
 			private NativeCaller _method_SetDebugLogMasks;
 			private NativeCaller _method_GetNetStats;
-			private NativeCaller _method_SetTraceNativeCaller;
-			private NativeCaller _method_SetEnableAvatarTracer;
+			private NativeCaller _method_SetEnableAvatarTracker;
 			private NativeCaller _method_GarbageCollection;
-			private NativeCaller _method_SendMessage;
 
 			#endregion
 
@@ -206,17 +186,11 @@
 			private static NativeCallerAttribute _attribute_GetNetStats = new NativeCallerAttribute(className,
 				"GetNetStats", ((uint)NativeCallFlags.NeedReturn | (uint)NativeCallFlags.NoCallArgument));
 
-			private static NativeCallerAttribute _attribute_SetTraceNativeCaller =
-				new NativeCallerAttribute(className, "SetTraceNativeCaller");
-
 			private static NativeCallerAttribute _attribute_GarbageCollection =
 				new NativeCallerAttribute(className, "GarbageCollection");
 
-			private static NativeCallerAttribute _attribute_SendMessage =
-				new NativeCallerAttribute(className, "SendMessage");
-
-			private static NativeCallerAttribute _attribute_SetEnableAvatarTracer =
-				new NativeCallerAttribute(className, "SetEnableAvatarTracer");
+			private static NativeCallerAttribute _attribute_SetEnableAvatarTracker =
+				new NativeCallerAttribute(className, "SetEnableAvatarTracker");
 
 			/// Callee Attributes.
 			private static NativeCalleeAttribute _attribute_OnError =

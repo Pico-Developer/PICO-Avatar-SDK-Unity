@@ -1,4 +1,5 @@
 ﻿using System;
+using Pico.Platform;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -47,6 +48,7 @@ namespace Pico.Avatar.Sample
         private GameObject rightHandPose;
         //load special avatarID,normal is 0
         private string avatarID = string.Empty;
+        private string characterType = "0";
         private System.Action<bool> loadedCall;
 
         //
@@ -74,7 +76,7 @@ namespace Pico.Avatar.Sample
             this.isMainAvatar = true;
         }
 
-        public void StartAvatar(string userID, InputActionProperty[] btnActions = null, string avatarID = "")
+        public void StartAvatar(string userID, InputActionProperty[] btnActions = null, string avatarID = "", string characterType = "0")
         {
             if (this.avatar != null)
             {
@@ -84,6 +86,7 @@ namespace Pico.Avatar.Sample
             this.jsonAvatar = "";
             this.userId = userID;
             this.avatarID = avatarID;
+            this.characterType = characterType;
             buttonActions = btnActions;
 
             CreateAvatar();
@@ -188,8 +191,19 @@ namespace Pico.Avatar.Sample
             capability.headShowType = headShowType;
             capability.enableExpression = enableExpression;
             if (manifestationType == AvatarManifestationType.HeadHands || manifestationType == AvatarManifestationType.Hands)
-            {// not full mode must set handAssetId
-                capability.handAssetId = "1550582586916995072";
+            {// mode must set handAssetId
+#if UNITY_EDITOR
+                if (Utility.GetPCNation() == NationType.China)
+#elif UNITY_ANDROID
+                if (ApplicationService.GetSystemInfo().IsCnDevice)
+#endif
+                {
+                    capability.handAssetId = "1550582586916995072";
+                }
+                else
+                {
+                    capability.handAssetId = "1550582590019702784";
+                }
             }
 
 
@@ -236,7 +250,7 @@ namespace Pico.Avatar.Sample
                 avatar = PicoAvatarManager.instance.LoadAvatar(new AvatarLoadContext(userId, this.avatarID, this.jsonAvatar, capability), callback);
             }
             else
-                avatar = PicoAvatarManager.instance.LoadAvatar(new AvatarLoadContext(userId, this.avatarID, null, capability), callback);
+                avatar = PicoAvatarManager.instance.LoadAvatar(new AvatarLoadContext(userId, this.avatarID, null, capability), callback, characterType);
 
             avatar.criticalJoints = this.criticalJoints;
 
@@ -283,6 +297,11 @@ namespace Pico.Avatar.Sample
             }
             PicoAvatarManager.instance.UnloadAvatar(this.avatar);
             this.avatar = null;
+        }
+
+        public PicoAvatar GetAvatar()
+        {
+            return avatar;
         }
 
         public void AlignAvatarArmSpan()

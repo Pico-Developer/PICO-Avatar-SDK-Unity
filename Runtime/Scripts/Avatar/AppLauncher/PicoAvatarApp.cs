@@ -2,7 +2,11 @@
 using UnityEngine;
 using System.Runtime.InteropServices;
 using System.Collections;
+using System.Linq;
+#if !NO_XR
 using Pico.Platform;
+#endif
+
 
 namespace Pico
 {
@@ -75,7 +79,7 @@ namespace Pico
 			/// <summary>
 			/// Login related settings
 			/// </summary>
-			public LoginSettings loginSettings;
+			public LoginSettings loginSettings = new LoginSettings();
 
 			/// <summary>
 			/// Log related settings
@@ -134,8 +138,22 @@ namespace Pico
 			/// One application accesses the user image through the encrypted uid , and the third-party application
 			/// obtains the current user through the platform.
 			/// </remarks>
-			[HideInInspector] public AccessType accessType = AccessType.ThirdApp;
+			[NonSerialized]
+			public AccessType accessType = AccessType.ThirdApp;
 
+			[NonSerialized]
+			public AppModeType appMode = AppModeType.Public;
+			
+			/// <summary>
+			/// Whether to use Matrix avatarSDK service(We recommend you to false when build apk, use true in PC)
+			/// </summary>
+			/// <remarks>
+			/// If checked, the libeffect.so and AvatarSDKScript.bytes in your project will be disabled.
+			/// Your application will use system services (your application will be hot updated by Matrix for the underlying sdk libraries).
+			/// If unchecked, your application will need to be updated manually with the release of the sdk version,
+			/// and unknown problems may occur if this is not done
+			/// </remarks>
+			[NonSerialized] public bool localMode = true;
 			/// <summary>
 			/// Notification that AvatarManager is initialized.
 			/// </summary>
@@ -191,15 +209,6 @@ namespace Pico
 				get => _frustumPlanes;
 			}
 
-
-#if PAV_INTERNAL_DEV
-			// Avatar tracer.
-			public AvatarTracer avatarTracer
-			{
-				get => _avatarTracer;
-			}
-#endif
-
 			// Sets/gets avatar scene light env
 			public PicoAvatarSceneLightEnv curAvatarSceneLightEnv { get; private set; }
 
@@ -211,6 +220,14 @@ namespace Pico
 			void Awake()
 			{
 				_playingMode = Application.isPlaying;
+				if (_instance == null)
+				{
+					_instance = this;
+				}
+				else if (_instance != this)
+				{
+					UnityEngine.Debug.LogWarning("Only one PicoAvatarSDK instance enabled.");
+				}
 			}
 
 			// Use this for initialization
@@ -224,6 +241,10 @@ namespace Pico
 				// Currently if editor mode
 				if (!Application.isPlaying)
 				{
+					if (renderSettings.customMaterialDatabase == null)
+                    {
+                        renderSettings.customMaterialDatabase = AvatarCustomMaterialDataBase.instance;
+                    }
 					// Check default configuration.
 					if (renderSettings.materialConfiguration == null)
 					{
@@ -247,18 +268,15 @@ namespace Pico
 					return;
 				}
 #endif
+				renderSettings.customMaterialDatabase?.Load();
+				
 				// Set global coroutine holder as this.
 				CoroutineExecutor.Start(this);
 
-				if (_instance == null)
+				if (_curStage == Stage.None)
 				{
-					_instance = this;
-					//
 					this.StartCoroutine(Coroutine_Initialize());
-				}
-				else if (_instance != this)
-				{
-					UnityEngine.Debug.LogWarning("Only one PicoAvatarSDK instance enabled.");
+				
 				}
 			}
 
@@ -561,7 +579,11 @@ namespace Pico
 					if (AvatarEnv.avatarPackedPathFirst || thirdPackage)
 					{
 						MemoryView jsData = null;
-						byte[] matrixJS = DllLoaderHelper.GetMatrixJSBytes(!appSettings.localMode);
+#if !UNITY_EDITOR && UNITY_ANDROID && !BUILD_THIRDAPP_INTERNAL
+						localMode = accessType == AccessType.OwnApp;
+#endif
+						
+						byte[] matrixJS = DllLoaderHelper.GetMatrixJSBytes(!localMode);
 						if (matrixJS != null)
 						{
 							jsData = new MemoryView(matrixJS, false);
@@ -602,10 +624,94 @@ namespace Pico
 
 			internal bool IsCnDevice()
 			{
-#if UNITY_EDITOR || UNITY_STANDALONE
-				return true;
+#if  UNITY_EDITOR
+				return Utility.GetPCNation() == NationType.China;
+#elif NO_XR
+				return loginSettings.nationType.Equals("cn");
 #else
 				return ApplicationService.GetSystemInfo().IsCnDevice;
+#endif
+			}
+			
+			internal int CompareVersion(string version1, string version2)
+			{
+			    int[] v1 = version1.Split('.').Select(int.Parse).ToArray();
+				int[] v2 = version2.Split('.').Select(int.Parse).ToArray();
+
+				int compareResult = 0;
+				int minLength = Math.Min(v1.Length, v2.Length);
+
+				for (int i = 0; i < minLength; i++)
+				{
+					compareResult = v1[i].CompareTo(v2[i]);
+
+					if (compareResult != 0)
+					{
+						break;
+					}
+				}
+
+				if (compareResult == 0 && v1.Length != v2.Length)
+				{
+					compareResult = v1.Length > v2.Length ? 1 : -1;
+				}
+				return compareResult; 
+			}
+
+
+			internal bool CheckRomVersion()
+			{
+#if  UNITY_EDITOR
+				return true;
+#elif NO_XR
+				return true;
+#else
+
+				string ROMVersion = ApplicationService.GetSystemInfo().ROMVersion;
+				string MatrixVersionName = ApplicationService.GetSystemInfo().MatrixVersionName;
+				long MatrixVersionCode = ApplicationService.GetSystemInfo().MatrixVersionCode;
+
+				UnityEngine.Debug.Log(string.Format(
+						"pav: PicoAvatarSdk Starting. ROMVersion:{0}  MatrixVersionName:{1}  MatrixVersionCode:{2}",
+						ROMVersion,
+						MatrixVersionName,
+						MatrixVersionCode.ToString()));
+
+				//check ROM
+				{
+					if(CompareVersion(ROMVersion, appSettings.minRomVersion) < 0)
+					{
+						string errorMessage = string.Format(
+							"pav: PicoAvatarSdk Starting. Rom version mismatch, CurrentVersion:{0}  RequiredVersion: {1}",
+							ROMVersion,
+							appSettings.minRomVersion);
+						UnityEngine.Debug.Log(errorMessage);
+						
+						//popup
+						DllLoaderHelper.HandleLackMethod(errorMessage, true);
+						return false;
+					}
+				}
+
+
+				//check Matrix
+				if(!localMode)
+				{
+					if(CompareVersion(MatrixVersionName, appSettings.minMatrixVersion) < 0)
+					{
+						string errorMessage = string.Format(
+							"pav: PicoAvatarSdk Starting. Matrix version mismatch, CurrentVersion:{0}  RequiredVersion: {1}",
+							MatrixVersionName,
+							appSettings.minMatrixVersion);
+						UnityEngine.Debug.Log(errorMessage);
+
+						//popup
+						DllLoaderHelper.HandleLackMethod(errorMessage, true);
+						return false;
+					}
+				}
+				
+				return true;
 #endif
 			}
 
@@ -745,19 +851,16 @@ namespace Pico
 				{
 					yield break;
 				}
-
-				DllLoaderHelper.InitDllLoader(!appSettings.localMode);
-
-				// Wait debugger when need debug c# on vr device.
-				if (false)
+#if !UNITY_EDITOR && UNITY_ANDROID && !BUILD_THIRDAPP_INTERNAL
+				localMode = accessType == AccessType.OwnApp;
+#endif
+				if(!CheckRomVersion())
 				{
-					int i = 0;
-					while (i++ < 5)
-					{
-						yield return new WaitForSeconds(1.0f);
-					}
+					yield break;
 				}
 
+				DllLoaderHelper.InitDllLoader(!localMode);
+				
 				var Path = "false";
 				if (appSettings.localResourcePath != "")
 				{
@@ -775,6 +878,7 @@ namespace Pico
 						"pav: PicoAvatarSdk Starting. avatarSdkVersion:{0}  avatarCoreVersion:{1}",
 						AppSettings.avatarSdkVersion + "-" + AppSettings.unityPluginCommit,
 						appSettings.avatarCoreVersion));
+
 
 					// Initialize avatar env.
 					var result = AvatarEnv.Initialize(AppSettings.avatarSdkVersion, (uint)logSettings.debugLogMasks,
@@ -824,7 +928,11 @@ namespace Pico
 				//
 				if (_nativeHandle == System.IntPtr.Zero)
 				{
-					_nativeHandle = pav_AvatarApp_New(true);
+#if PAV_INTERNAL_DEV
+                    _nativeHandle = pav_AvatarApp_New(false);
+#else
+                    _nativeHandle = pav_AvatarApp_New(true);
+#endif
 				}
 
 				//
@@ -1015,15 +1123,7 @@ namespace Pico
 
 					// Uninitialize avatar manager.
 					StopAvatarManager();
-
-#if PAV_INTERNAL_DEV
-					// destroy avatar tracer.
-					if (_avatarTracer != null)
-					{
-						_avatarTracer.Destroy();
-						_avatarTracer = null;
-					}
-#endif
+					
 					// Notify script to shutdown.
 					if (_rmiObject != null)
 					{
@@ -1115,17 +1215,6 @@ namespace Pico
 				}
 			}
 
-			private void SetTraceNativeCaller(bool trace)
-			{
-				//
-				_traceNativeCaller = trace;
-
-				if (_rmiObject != null)
-				{
-					_rmiObject.SetTraceNativeCaller(trace);
-				}
-			}
-
 			/// <summary>
 			/// Sets whether enable add time to log item
 			/// </summary>
@@ -1190,34 +1279,23 @@ namespace Pico
 					}
 				}
 			}
-#if PAV_INTERNAL_DEV
-			public new void SendMessage(string msg)
-			{
-				if (_rmiObject != null)
-				{
-					_rmiObject.SendMessage(msg);
-				}
-			}
-
-
+			
 			/// <summary>
-			/// Used by test framework to trace avatar logic points
+			/// Sets whether enable tracker data of avatar. default enable is true.
 			/// </summary>
-			/// <param name="enableTracer"></param>
-			public void SetEnableAvatarTracer(bool enableTracer)
+			/// <param name="enableTracker"></param>
+			public void SetEnableAvatarTracker(bool enableTracker)
 			{
 				if (_rmiObject != null)
 				{
-					_rmiObject.SetEnableAvatarTracer(enableTracer);
-					//
-					if (enableTracer && _avatarTracer == null)
-					{
-						_avatarTracer = new AvatarTracer();
-					}
+					_rmiObject.SetEnableAvatarTracker(enableTracker);
+					// todo: add send msg for C#
+					// if(enableTracker && _avatarTracker == null)
+					// {
+					//     _avatarTracker = new AvatarTracker();
+					// }
 				}
 			}
-#endif
-
 			#endregion
 
 			#region Cache Frame Values
@@ -1266,14 +1344,8 @@ namespace Pico
 			// Frustum planes.
 			private Plane[] _frustumPlanes;
 
-			// Trace native caller.
-			//[SerializeField, HideInInspector]
-			private bool _traceNativeCaller = false;
+			private bool _trackerNativeCaller = false;
 
-#if PAV_INTERNAL_DEV
-			// Avatar tracer.
-			private AvatarTracer _avatarTracer = null;
-#endif
 			// Auto gc.
 			private float _lastGCTime = 0.0f;
 			private float timeSpanToGC = 15.0f;
@@ -1437,7 +1509,6 @@ namespace Pico
 						}
 					}
 					//
-
 
 					return;
 				}

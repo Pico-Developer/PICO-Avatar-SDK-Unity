@@ -1,6 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+
+#if !NO_XR
+	using Pico.Platform;
+#endif
+
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
@@ -12,7 +17,7 @@ namespace Pico
 		/// <summary>
 		/// Avatar loaded or updated delegate.
 		/// </summary>
-		public delegate void AvatarSpecificationUpdated(PicoAvatar avatar, long requestId, int errorCode,
+		public delegate void AvatarSpecificationUpdated(PicoAvatar avatar, int errorCode,
 			string message);
 
 		/// <summary>
@@ -191,7 +196,7 @@ namespace Pico
 			/// <param name="responsed">Image data return callback</param>
 			/// <returns>Return null if avatar with same user id</returns>
 			public PicoAvatar LoadAvatar(AvatarLoadContext loadContext,
-				Action<PicoAvatar, AvatarEntity> callback = null)
+				Action<PicoAvatar, AvatarEntity> callback = null, string characterType = "", string characterVersion = "")
 			{
 				// If AvatarManager has not been initialized and do not allow load avatar from cache, just return.
 				if (!isReady)
@@ -255,7 +260,7 @@ namespace Pico
 				}
 
 				// Load request will create avatar be invoke 
-				if (!loadContext.DoRequest())
+				if (!loadContext.DoRequest(characterType, characterVersion))
 				{
 					callback?.Invoke(null, null);
 					AvatarEnv.Log(DebugLogMask.GeneralError, "LoadAvatar failed for bad parameters! ");
@@ -278,7 +283,7 @@ namespace Pico
 						//Try load again.
 						{
 							// Load request will create avatar be invoke 
-							loadContext.DoRequest();
+							loadContext.DoRequest(characterType, characterVersion);
 							// Set capabilities.
 							_avatarDict.TryGetValue(loadContext.userId, out avatar);
 						}
@@ -478,25 +483,44 @@ namespace Pico
 			/// Start avatar editor app
 			/// </summary>
 			/// <param name="packageName">application package name</param>
+			/// <param name="callback"></param>
 			/// <returns>true if start</returns>
-			public bool StartAvatarEditor(string packageName)
+			public void StartAvatarEditor(string packageName, Action<bool> callback)
 			{
+#if !NO_XR
+				VerifyAppModeRequest.DoRequest(CoreService.GetAppID(), (errorCode, type) =>
+				{
+					if (errorCode != 0 || type == 3 || PicoAvatarApp.instance == null) //private mode do nothing
+					{
+						callback(false);
+						return;
+					}
+
+				
+					PicoAvatarApp.instance.appMode = type == 2 ? AppModeType.Single : AppModeType.Public;
 #if UNITY_ANDROID && !UNITY_EDITOR
-                try
-                {
-                    SetAvatarEditorJavaObject();
-                    var context = _unityPlayerJavaClass.GetStatic<AndroidJavaObject>("currentActivity");
-                    return _avatarEditorJavaObject.Call<bool>("startAvatarEditor", context, packageName, "near");
-                }
-                catch (System.Exception ex)
-                {
-                    Debug.Log(ex.ToString());
-                    return false;
-                }
+					try
+					{
+						SetAvatarEditorJavaObject();
+						var context = _unityPlayerJavaClass.GetStatic<AndroidJavaObject>("currentActivity");
+						_avatarEditorJavaObject.Call<bool>("startAvatarEditor", context, packageName, "near", type);
+						callback(true);
+						Debug.Log("start avatar editor succeed!");
+						return;
+					}
+					catch (System.Exception ex)
+					{
+						Debug.Log(ex.ToString());
+						Debug.Log("start avatar editor failure!");
+						callback(false);
+					}
 #else
-				UnityEngine.Debug.LogError("StartAvatarEditor DOES NOT WORK in current platform!");
+					UnityEngine.Debug.LogError("StartAvatarEditor DOES NOT WORK in current platform!");
 #endif
-				return false;
+					Debug.Log("start avatar editor failure!");
+					callback(false);
+				});
+#endif
 			}
 
 			/// <summary>
@@ -655,9 +679,10 @@ namespace Pico
 						}
 
 						//
-						if (x.Value.CheckNativeVisible() && x.Value.PreUpdateFrame(gameTime))
+						if (x.Value.CheckNeedUpdateSimulationDataThisFrame() && x.Value.PreUpdateFrame(gameTime))
 						{
 							avatarEntitiesToUpdateSimulationDataThisFrame.Add(x.Value.entity);
+							x.Value.forceUpdateSkeletonFromNative = false;
 						}
 					}
 				}
@@ -872,6 +897,19 @@ namespace Pico
 							"Please restart Unity, AvatarMananger not uninitialized at previous stop.", "OK");
 					}
 #endif
+					// Add developer real appid
+					if (string.IsNullOrEmpty(configString))
+					{
+#if !NO_XR
+						string appId = Pico.Platform.CoreService.GetAppID();
+						AppConfigData configData = new AppConfigData();
+						configData.PicoDevelopAppId = appId;
+						configString = JsonUtility.ToJson(configData);
+						
+						AvatarEnv.Log(DebugLogMask.GeneralInfo, "configString= " + configString);
+						PicoAvatarApp.instance.extraSettings.configString = configString;
+#endif
+					}
 					//
 					if (pav_AvatarManager_Initialize(_nativeHandle, "", "", userToken,
 						    startGameTime, serverType, accessType, nationType, configString, sceneData) !=
@@ -1191,7 +1229,7 @@ namespace Pico
 			/// <param name="userId"></param>
 			/// <param name="errorCode"></param>
 			/// <param name="msg"></param>
-			internal void ProcessAvatarLoadRequest(long requestId, string userId, int errorCode, string msg)
+			internal void ProcessAvatarLoadRequest(string userId, int errorCode, string msg)
 			{
 				var avatarBase = GetAvatar(userId);
 				if (avatarBase != null)
@@ -1199,12 +1237,12 @@ namespace Pico
 					if (errorCode == 0)
 					{
 						//这里是加载资产完成的回调
-						OnAvatarSpecificationUpdated?.Invoke(avatarBase, requestId, (int)errorCode, msg);
+						OnAvatarSpecificationUpdated?.Invoke(avatarBase, (int)errorCode, msg);
 					}
 					else
 					{
 						//TODO: error code.
-						OnAvatarSpecificationUpdated?.Invoke(avatarBase, requestId, (int)errorCode, msg);
+						OnAvatarSpecificationUpdated?.Invoke(avatarBase, (int)errorCode, msg);
 					}
 				}
 			}
@@ -1349,6 +1387,12 @@ namespace Pico
 					GameObject.DestroyImmediate(_eventReciever);
 
 				_eventReciever = null;
+			}
+			
+			private class AppConfigData
+			{
+				public string channel;
+				public string PicoDevelopAppId;
 			}
 
 			/// <summary>

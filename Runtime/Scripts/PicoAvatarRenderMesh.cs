@@ -63,7 +63,8 @@ namespace Pico
 			}
 
 			// render material.
-			public PicoAvatarRenderMaterial[] renderMaterials { get; protected set; }
+			public PicoAvatarRenderMaterial[] officialRenderMaterials { get; protected set; }
+			public AvatarCustomMaterial[] customRenderMaterials { get; protected set; }
 
 			// whether show as outline.
 			public AvatarEffectKind avatarEffectKind { get; protected set; } = AvatarEffectKind.None;
@@ -192,27 +193,31 @@ namespace Pico
             //Destroy AvatarRenderMaterials created from native AvatarRenderMaterial.
             private void DestroyAvatarRenderMaterials()
 			{
-				if (renderMaterials != null)
+				if (officialRenderMaterials != null)
 				{
-					for (int i = 0; i < renderMaterials.Length; ++i)
+					for (int i = 0; i < officialRenderMaterials.Length; ++i)
 					{
-						renderMaterials[i]?.Release();
-						renderMaterials[i] = null;
+						officialRenderMaterials[i]?.Release();
+						officialRenderMaterials[i] = null;
 					}
 				}
 
-				renderMaterials = null;
-			}
-            
-            //Sets material with native material and prescribed lod level.
-            //Invoked by derived class when build render mesh.
-            protected void BuildAndApplyRuntimeMaterials(PicoAvatarRenderMaterial[] mats)
-			{
-				if (meshRenderer == null && skinMeshRenderer == null)
+				officialRenderMaterials = null;
+				
+				if (customRenderMaterials != null)
 				{
-					return;
+					for (int i = 0; i < customRenderMaterials.Length; ++i)
+					{
+						customRenderMaterials[i]?.Release();
+						customRenderMaterials[i] = null;
+					}
 				}
 
+				customRenderMaterials = null;
+			}
+
+			protected Material[] GetOfficialRuntimeMaterial(PicoAvatarRenderMaterial[] mats)
+			{
 				var runtimeMaterials = new Material[mats.Length];
 				for (int i = 0; i < mats.Length; ++i)
 				{
@@ -227,25 +232,45 @@ namespace Pico
 					else
 					{
 						AvatarEnv.Log(DebugLogMask.GeneralError, "Failed to get runtime material.");
+						return null;
 					}
 				}
-
-				if (skinMeshRenderer)
-				{
-					skinMeshRenderer.sharedMaterials = runtimeMaterials;
-				}
-				else
-				{
-					meshRenderer.sharedMaterials = runtimeMaterials;
-					// add a empty MaterialPropertyBlock to make renderer incompatible with the SRP Batcher
-					meshRenderer.SetPropertyBlock(new MaterialPropertyBlock());
-				}
-
-				//
-				_isRenderDataReady = true;
-
-				onMaterialsUpdate?.Invoke(this);
+				return runtimeMaterials;
 			}
+			
+            protected Material[] GetCustomRuntimeMaterial(AvatarCustomMaterial[] mats)
+            {
+	            var customMaterialDB = PicoAvatarApp.instance.renderSettings.customMaterialDatabase;
+	            if (!customMaterialDB)
+	            {
+		            AvatarEnv.Log(DebugLogMask.GeneralError, "PicoAvatarApp.instance.renderSettings.customMaterialDatabase is null.");
+		            return null;
+	            }
+	            var runtimeCustomMaterials = new Material[mats.Length];
+	            for (int i = 0; i < mats.Length; ++i)
+	            {
+		            if(customMaterialDB.Lookup(mats[i].Guid, out Material material))
+		            {
+			            if (material != null)
+			            {
+				            runtimeCustomMaterials[i] = material;
+			            }
+			            else
+			            {
+				            AvatarEnv.Log(DebugLogMask.GeneralError, "Failed to though guid to get runtime custom material from customMaterialDB.");
+				            AvatarEnv.Log(DebugLogMask.GeneralError, string.Format("The current project is missing the required material (map key: {0}), If you want to preview it normally, please import it.",mats[i].Guid));
+				            return null;
+			            } 
+		            }
+		            else
+		            {
+			            AvatarEnv.Log(DebugLogMask.GeneralError, "Failed to though guid to get runtime custom material from customMaterialDB.");
+			            AvatarEnv.Log(DebugLogMask.GeneralError, string.Format("The current project is missing the required material (map key: {0}), If you want to preview it normally, please import it.",mats[i].Guid));
+			            return null;
+		            }
+	            }
+	            return runtimeCustomMaterials;
+            }
             
             //Fill properties and textures of runtime unity material with AvatarRenderMaterial.
             protected void FillRuntimeMaterialWithAvatarRenderMaterial(PicoAvatarRenderMaterial mat, Material material)
@@ -329,16 +354,16 @@ namespace Pico
 			//Fill a runtime unity material with AvatarRenderMaterial. Usually used to update material runtimly and manually by avatar sdk developer.
 			public void FillRuntimeMaterial(Material mat, int materialIndex = 0)
 			{
-				if (renderMaterials != null && (uint)materialIndex <= (uint)renderMaterials.Length)
+				if (officialRenderMaterials != null && (uint)materialIndex <= (uint)officialRenderMaterials.Length)
 				{
-					FillRuntimeMaterialWithAvatarRenderMaterial(renderMaterials[materialIndex], mat);
+					FillRuntimeMaterialWithAvatarRenderMaterial(officialRenderMaterials[materialIndex], mat);
 				}
 			}
 
 			// When shader changed outside, should update material properties.
 			public void OnShaderChanged()
 			{
-				if ((meshRenderer == null && skinMeshRenderer == null) || renderMaterials == null || !isRenderDataReady)
+				if ((meshRenderer == null && skinMeshRenderer == null) || officialRenderMaterials == null || !isRenderDataReady)
 				{
 					return;
 				}
@@ -346,11 +371,11 @@ namespace Pico
 				var sharedMaterials = skinMeshRenderer != null
 					? skinMeshRenderer.sharedMaterials
 					: meshRenderer.sharedMaterials;
-				if (sharedMaterials != null && sharedMaterials.Length == renderMaterials.Length)
+				if (sharedMaterials != null && sharedMaterials.Length == officialRenderMaterials.Length)
 				{
 					for (int i = 0; i < sharedMaterials.Length; ++i)
 					{
-						FillRuntimeMaterialWithAvatarRenderMaterial(renderMaterials[i], sharedMaterials[i]);
+						FillRuntimeMaterialWithAvatarRenderMaterial(officialRenderMaterials[i], sharedMaterials[i]);
 					}
 				}
 
@@ -373,11 +398,11 @@ namespace Pico
 					var sharedMaterials = skinMeshRenderer != null
 						? skinMeshRenderer.sharedMaterials
 						: meshRenderer.sharedMaterials;
-					if (sharedMaterials != null && sharedMaterials.Length == renderMaterials.Length)
+					if (sharedMaterials != null && sharedMaterials.Length == officialRenderMaterials.Length)
 					{
 						for (int i = 0; i < sharedMaterials.Length; ++i)
 						{
-							FillRuntimeMaterialWithAvatarRenderMaterial(renderMaterials[i], sharedMaterials[i]);
+							FillRuntimeMaterialWithAvatarRenderMaterial(officialRenderMaterials[i], sharedMaterials[i]);
 						}
 					}
 
@@ -394,54 +419,73 @@ namespace Pico
 
 			internal void Notify_AvatarSceneLightEnvChanged(PicoAvatarSceneLightEnv lightEnv)
 			{
-				if (renderMaterials != null)
+				if (officialRenderMaterials != null)
 				{
-					for (int i = 0; i < renderMaterials.Length; ++i)
+					for (int i = 0; i < officialRenderMaterials.Length; ++i)
 					{
-						renderMaterials[i]?.OnAvatarSceneLightEnvChanged(lightEnv);
+						officialRenderMaterials[i]?.OnAvatarSceneLightEnvChanged(lightEnv);
 					}
 				}
 			}
-			
+
+			internal bool BuildCustomMaterialsFromNative(System.IntPtr[] renderMaterialHandles)
+			{
+                customRenderMaterials = new AvatarCustomMaterial[renderMaterialHandles.Length];
+                bool success = true;
+                for (int i = 0; i < customRenderMaterials.Length; ++i)
+                {
+	                customRenderMaterials[i] = new AvatarCustomMaterial(_AvatarLod);
+	                customRenderMaterials[i].Retain();
+                    
+                    // try to load render material.
+                    if (!customRenderMaterials[i].GetGuidFromNativeMaterial(renderMaterialHandles[i]))
+                    {
+                        success = false;
+                        break;
+                    }
+                }
+                if (!success)
+                {
+                    for (int i = 0; i < customRenderMaterials.Length; ++i)
+                    {
+	                    customRenderMaterials[i]?.Release();
+	                    customRenderMaterials[i] = null;
+                    }
+                    customRenderMaterials = null;
+                    return false;
+                }
+
+                return true;
+			}
+
             //Build material from native AvatarRenderMaterial and apply to the renderer.
             //@param renderMaterialHandles list of native AvatarRenderMaterial. Reference count has been added from invoker.
-            internal bool BuildMaterialsFromNative(System.IntPtr[] renderMaterialHandles,
+            internal bool BuildOfficialMaterialsFromNative(System.IntPtr[] renderMaterialHandles,
 				AvatarLodLevel lodLevel, bool merged)
 			{
+				
 				// create material with native material data. pass lifetime management of renderMaterialHandles to AvatarRenderMaterials.
-				var newRenderMaterials = CreateRenderMaterials(renderMaterialHandles, lodLevel, merged);
-				if (newRenderMaterials == null)
+				officialRenderMaterials = CreateRenderMaterials(renderMaterialHandles, lodLevel, merged);
+				if (officialRenderMaterials == null)
 				{
 					Destroy();
 					return false;
 				}
 
 				{
-					//UnityEngine.Profiling.Profiler.BeginSample("PicoPrimitiveRenderMesh.LoadTextures");
-					for (int i = 0; i < newRenderMaterials.Length; ++i)
+					for (int i = 0; i < officialRenderMaterials.Length; ++i)
 					{
-						var renderMaterial = newRenderMaterials[i];
+						var renderMaterial = officialRenderMaterials[i];
 						if (renderMaterial != null)
 						{
 							if (!renderMaterial.LoadTexturesFromNativeMaterial(lodLevel))
 							{
-								renderMaterials = newRenderMaterials;
 								Destroy();
 								return false;
 							}
 						}
 					}
-					//UnityEngine.Profiling.Profiler.EndSample();
 				}
-
-				// create unity material and apply to unity mesh.
-				BuildAndApplyRuntimeMaterials(newRenderMaterials);
-				//
-				DestroyAvatarRenderMaterials();
-
-				// keep track current avatar render materials.
-				renderMaterials = newRenderMaterials;
-
 				return true;
 			}
 
@@ -509,7 +553,10 @@ namespace Pico
 
 			// cached morphChannelWeights
 			private float[] _blendshapeWeights;
-
+			
+			//
+			protected bool _useCustomMaterial = false;
+			
 			#endregion
 
 
@@ -525,11 +572,7 @@ namespace Pico
 				bool cacheMorphChannelWeights = false,
 				bool depressSkin = false)
 			{
-				//if (AvatarEnv.NeedLog(DebugLogMask.AvatarLoad))
-				//{
-				//    AvatarEnv.Log(DebugLogMask.AvatarLoad, "AvatarRenderMesh.CreateUnityRenderMesh.Start");
-				//}
-
+				
 				avatarSkeleton = avatarSkeleton_;
 
 				// check
@@ -551,7 +594,7 @@ namespace Pico
 					// _staticMeshBuffer.Retain() has been invoked.
 					_avatarMeshBuffer = AvatarMeshBuffer.CreateAndRefMeshBuffer(renderMeshHandle,
 						_materialConfiguration.needTangent,
-						allowGpuDataCompressd, depressSkin);
+						allowGpuDataCompressd, depressSkin, this._useCustomMaterial);
 					if (_avatarMeshBuffer == null)
 					{
 						return false;
@@ -869,18 +912,18 @@ namespace Pico
             //Update dirty material uniforms.
             internal void UpdateDirtyMaterialUniforms()
 			{
-				if (renderMaterials != null && (meshRenderer != null || skinMeshRenderer != null))
+				if (officialRenderMaterials != null && (meshRenderer != null || skinMeshRenderer != null))
 				{
 					var unityMaterials = skinMeshRenderer != null
 						? skinMeshRenderer.sharedMaterials
 						: meshRenderer.sharedMaterials;
-					var count = renderMaterials.Length;
+					var count = officialRenderMaterials.Length;
 					if (count == unityMaterials.Length)
 					{
 						for (int i = 0; i < count; ++i)
 						{
-							renderMaterials[i].UpdateDirtyMaterialUniforms();
-							_materialConfiguration.UpdateToUniformsMaterial(renderMaterials[i], unityMaterials[i]);
+							officialRenderMaterials[i].UpdateDirtyMaterialUniforms();
+							_materialConfiguration.UpdateToUniformsMaterial(officialRenderMaterials[i], unityMaterials[i]);
 						}
 					}
 				}
@@ -985,14 +1028,28 @@ namespace Pico
 				{
 					return false;
 				}
+				
 
-				//// log
-				//if (AvatarEnv.NeedLog(DebugLogMask.GeneralInfo))
-				//{
-				//    AvatarEnv.Log(DebugLogMask.GeneralInfo, "PrimitiveRenderMesh.BuildFromNativeRenderMesh.Start");
-				//}
-
-				// build mesh with native mesh data for a lod level.
+				Material[] customMaterials = null;
+				Material[] officialMaterials = null;
+				
+				// get Custom Material info.
+				// get customRenderMaterials --> AvatarMaterial.
+				// get customMaterials --> Unity Runtime Material.
+				if (PicoAvatarApp.instance.renderSettings.useCustomMaterial)
+				{
+					if(BuildCustomMaterialsFromNative(renderMaterialHandles))
+					{
+						customMaterials = GetCustomRuntimeMaterial(customRenderMaterials);
+						if (customMaterials != null) 
+						{
+							this._useCustomMaterial = true;
+						}
+					}
+				}
+				
+				// build mesh with native mesh data for a lod level second.
+				// using _useCustomMaterial to flip uv.
 				{
 					if (!CreateUnityRenderMesh(renderMeshHandle, avatarSkeleton_, _Primitive.lodLevel,
 						    _Primitive.nativeHandle,
@@ -1001,28 +1058,52 @@ namespace Pico
 						return false;
 					}
 				}
-
-				// create material with native material data
+				
+				// get Official material info.
+				// get officialRenderMaterials --> AvatarMaterial.
+				// get officialMaterials --> Unity Runtime Material.
 				{
-					//UnityEngine.Profiling.Profiler.BeginSample("PicoPrimitiveRenderMesh.LoadTextures");
-					if (!BuildMaterialsFromNative(renderMaterialHandles, _Primitive.lodLevel, false))
+					if (!BuildOfficialMaterialsFromNative(renderMaterialHandles, _Primitive.lodLevel, false))
 					{
 						return false;
 					}
-					//UnityEngine.Profiling.Profiler.EndSample();
+					officialMaterials = GetOfficialRuntimeMaterial(officialRenderMaterials);
 				}
 
+				// set official Material first.
+				if (officialMaterials != null)
+				{
+					if (skinMeshRenderer)
+					{
+						skinMeshRenderer.sharedMaterials = officialMaterials;
+					}
+					else if (meshRenderer)
+					{
+						meshRenderer.sharedMaterials = officialMaterials;
+						meshRenderer.SetPropertyBlock(new MaterialPropertyBlock());
+					}
+				}
+				
+				// set CustomMaterial Second.
+				if (customMaterials != null)
+				{
+					if (skinMeshRenderer)
+					{
+						skinMeshRenderer.sharedMaterials = customMaterials;
+					}
+					else if (meshRenderer)
+					{
+						meshRenderer.sharedMaterials = customMaterials;
+						meshRenderer.SetPropertyBlock(new MaterialPropertyBlock());
+					}
+				}
+				
 				//
 				if (needUpdateSimulation && _Primitive.owner != null)
 				{
 					_Primitive.owner.AddSimulationNeededAvatarPrimitive(_Primitive);
 				}
-
-				//// log
-				//if (AvatarEnv.NeedLog(DebugLogMask.GeneralInfo))
-				//{
-				//    AvatarEnv.Log(DebugLogMask.GeneralInfo, "PrimitiveRenderMesh.BuildFromNativeRenderMesh.After");
-				//}
+				
 				return true;
 			}
 

@@ -79,13 +79,6 @@ namespace Pico
                     }
 
                 }
-
-#if UNITY_EDITOR
-                protected override void OnPicoAvatarAppStartTestModel()
-                {
-                    this.UserServiceUserID = PicoAvatarPlatformInfoTestModelUtils.UserID;
-                }
-#endif
             }
         }
     }

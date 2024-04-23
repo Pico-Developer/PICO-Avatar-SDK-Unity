@@ -30,7 +30,7 @@ namespace Pico
 			}
 
 			/// <summary>
-			/// Whether enity is destroyed.
+			/// Whether entity is destroyed.
 			/// </summary>
 			public bool isDestroyed
 			{
@@ -287,7 +287,7 @@ namespace Pico
 				}
 				else
 				{
-					Debug.LogError("BindEntity failed. NativeHandle is invalid or allready been used.");
+					Debug.LogError("BindEntity failed. NativeHandle is invalid or already been used.");
 					return false;
 				}
 			}
@@ -774,7 +774,7 @@ namespace Pico
 			// User id.
 			private string _userId = "0";
 
-			// Ownder avatar
+			// Owner avatar
 			private PicoAvatar _owner = null;
 
 			// Entity id.
@@ -830,7 +830,7 @@ namespace Pico
 			private bool rightCustomHand = false;
 
 
-			// Last time that skip updation enen the entity is visible.
+			// Last time that skip updation when the entity is visible.
 			private float _lastSkipVisibleUpdateTime = 0.0f;
 
 			// Last time that skip updation when avatar is culled by camera frustum.
@@ -1254,7 +1254,7 @@ namespace Pico
 					else // If (!isMainAvatar)
 					{
 						if (avatarApp.optimizationSettings.skipUpdateIfInvisibleThisFrame && !_inCameraFrustum &&
-						    !owner.forceUpdateSkeleton)
+						    !owner.forceUpdateSkeleton && !owner.forceUpdateSkeletonFromNative)
 						{
 							// if invisible, we MUST at least update native avatar once each 0.1 seconds.
 							if (Time.time - _lastSkipInvisibleUpdateTime < 0.2f)
@@ -1293,7 +1293,7 @@ namespace Pico
 						}
 
 						// Skip update even visible if too far.
-						if (avatarApp.optimizationSettings.skipUpdateEvenVisibleDistance > 0)
+						if (avatarApp.optimizationSettings.skipUpdateEvenVisibleDistance > 0 && !owner.forceUpdateSkeletonFromNative)
 						{
 							if (sqrtDist > avatarApp.squaredSkipUpdateEvenVisibleDistance &&
 							    Time.time - _lastSkipVisibleUpdateTime <

@@ -38,6 +38,6 @@ namespace Pico.Avatar.Sample
     [CreateAssetMenu(menuName = "Scriptable Object/SceneDescConfig",order = 2)]
     public class SceneDescription : ScriptableObject
     {
-        public List<SceneDescriptionGroup> sceneDescGroup = new ();
+        public List<SceneDescriptionGroup> sceneDescGroup = new List<SceneDescriptionGroup>();
     }
 }

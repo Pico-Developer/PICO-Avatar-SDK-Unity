@@ -1,11 +1,67 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using System.Runtime.InteropServices;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace Pico
 {
 	namespace Avatar
 	{
+        public class AvatarCustomMaterial : NativeObject
+        {
+            public string Guid;
+
+            protected CommonMaterialPropertyData[] propertyInfos;
+            
+            // refactor: rename the function name.
+            internal unsafe bool GetGuidFromNativeMaterial(System.IntPtr nativeHandle_)
+            {
+                if (nativeHandle != System.IntPtr.Zero)
+                {
+                    throw new System.Exception("BadProgram!");
+                }
+                
+                NativeResult result;
+                System.Text.StringBuilder guid = new System.Text.StringBuilder("", 128);
+                result = pav_AvatarRenderMaterial_GetCustomMaterialGuid(nativeHandle_, guid);
+                if (result != NativeResult.Success) 
+                    return false;
+                Guid = guid.ToString();
+                return true;
+            } 
+
+            internal AvatarCustomMaterial(AvatarLod avatarLod)
+            {
+                _AvatarLod = avatarLod;
+            }
+
+            AvatarLod _AvatarLod;
+
+
+            [StructLayout(LayoutKind.Sequential, Pack = 1)]
+            public struct CommonMaterialPropertyInfo
+            {
+                public uint type;
+                public uint id;
+                public System.IntPtr name;
+            };
+
+            public struct CommonMaterialPropertyData
+            {
+                public uint type;
+                public uint id;
+                public string name;
+            };
+            
+            const string PavDLLName = DllLoaderHelper.PavDLLName;
+            [DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+            private static extern NativeResult pav_AvatarRenderMaterial_GetCustomMaterialGuid(System.IntPtr nativeHandle, System.Text.StringBuilder guid);
+        }
+        /// <summary>
+        /// /////////////////////
+        /// </summary>
+
 		public enum RenderPipelineType
 		{
 			None = 0,
@@ -37,6 +93,7 @@ namespace Pico
 			None = 0,
 			Metallic = 1,
 			Smoothness = 2,
+			Cutoff = 3,
 		}
 
 		public enum AvatarColorSemantic
@@ -324,6 +381,9 @@ namespace Pico
 
 			// AvatarShaderType "_ShaderType"; default : 0.0
 			public AvatarShaderType mat_ShaderType { get; private set; }
+			
+			// OfficialShaderTheme "_ShaderTheme"; default : 0.0
+			public OfficialShaderTheme mat_ShaderTheme { get; private set; }
 
 			// RenderPipelineType; default : 0.0
 			public RenderPipelineType mat_RenderPipelineType { get; private set; }
@@ -370,6 +430,8 @@ namespace Pico
 				get => matPV_EmissionMap;
 			}
 
+			public bool mat_alphaTest { get; private set; }
+
 			#endregion
 
 			#region Has Material properties
@@ -406,7 +468,7 @@ namespace Pico
 				}
 
 				// set material
-				_RuntimeMaterial = _MaterialConfig.ApplyToMaterial(this, renderMesh.lodLevel);
+				_RuntimeMaterial = _MaterialConfig.CreateRuntimeMaterialFromNativeMaterial(this, renderMesh.lodLevel);
 
 				if (_AvatarLod.owner.owner.materialProvider != null)
 				{
@@ -469,31 +531,36 @@ namespace Pico
 					material.SetFloat("_AdditiveGI", additiveGI);
 				}
 
+				if (mat_alphaTest && mat_ShaderTheme == OfficialShaderTheme.PicoNPR)
+				{
+					material.EnableKeyword("_ALPHATEST_ON");
+				}
+
 				// if tooth, only accept main light.
 				if (_MaterialConfig.enableMultiLights)
 				{
 					material.EnableKeyword("_ADDITIONAL_LIGHTS");
 				}
 
-				// set macros.
-				if (mat_BumpMap != null)
-				{
-					material.EnableKeyword("_NORMALMAP");
-					material.EnableKeyword("_METALLICSPECGLOSSMAP");
-					material.DisableKeyword("_SPECULARHIGHLIGHTS_OFF");
-					material.DisableKeyword("_SPECULAR_SETUP");
-					material.DisableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
-#if UNITY_EDITOR
-					material.SetFloat("_SpecularHighlights", 0.0f);
-					material.SetFloat("_EnvironmentReflections", 1.0f);
-#endif
-					//UnityEngine.Debug.Log("AvatarSDK metallic tex set.");
-				}
+// 				// set macros.
+// 				if (mat_BumpMap != null)
+// 				{
+// 					material.EnableKeyword("_NORMALMAP");
+// 					material.EnableKeyword("_METALLICSPECGLOSSMAP");
+// 					material.DisableKeyword("_SPECULARHIGHLIGHTS_OFF");
+// 					material.DisableKeyword("_SPECULAR_SETUP");
+// 					material.DisableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
+// #if UNITY_EDITOR
+// 					material.SetFloat("_SpecularHighlights", 0.0f);
+// 					material.SetFloat("_EnvironmentReflections", 1.0f);
+// #endif
+// 					//UnityEngine.Debug.Log("AvatarSDK metallic tex set.");
+// 				}
 
-				if (mat_EmissionMap != null)
-				{
-					material.EnableKeyword("_EMISSION");
-				}
+				// if (mat_EmissionMap != null)
+				// {
+				// 	material.EnableKeyword("_EMISSION");
+				// }
 
 				//
 				if (mat_SceneBlendType == AvatarSceneBlendType.SrcAlpha_OneMinusSrcAlpha)
@@ -528,31 +595,31 @@ namespace Pico
 				}
 
 				// color mask
-				if (mat_ColorMask != 0x0f)
-				{
-					material.SetFloat("_ColorMask", (float)mat_ColorMask);
-				}
+				// if (mat_ColorMask != 0x0f)
+				// {
+				// 	material.SetFloat("_ColorMask", (float)mat_ColorMask);
+				// }
 
-				{
-					float cullValue = 0.0f; // close cull.
-					material.SetFloat("_Cull", cullValue);
-				}
+				// {
+				// 	float cullValue = 0.0f; // close cull.
+				// 	material.SetFloat("_Cull", cullValue);
+				// }
 
 
-				if (!mat_ZWrite)
-				{
-					material.SetFloat("_ZWrite", (float)0.0f);
-				}
+				// if (!mat_ZWrite)
+				// {
+				// 	material.SetFloat("_ZWrite", (float)0.0f);
+				// }
 
-				if (!mat_ZTest)
-				{
-					material.SetFloat("_ZTest", (float)0.0f);
-				}
+				// if (!mat_ZTest)
+				// {
+				// 	material.SetFloat("_ZTest", (float)0.0f);
+				// }
 
-				if (PicoAvatarApp.instance != null && PicoAvatarApp.instance.renderSettings.enableRimProfile)
-				{
-					material.EnableKeyword("PAV_RIM_PROFILE");
-				}
+				// if (PicoAvatarApp.instance != null && PicoAvatarApp.instance.renderSettings.enableRimProfile)
+				// {
+				// 	material.EnableKeyword("PAV_RIM_PROFILE");
+				// }
 
 				// PAV_COLOR_REGION_BAKED
 				{
@@ -584,6 +651,7 @@ namespace Pico
 
 					//
 					mat_ShaderType = (AvatarShaderType)renderState.shaderType;
+					mat_ShaderTheme = (OfficialShaderTheme)renderState.shaderTheme;
 					mat_RenderQueue = renderState.renderQueue;
 					// reset render queue id.
 					if (mat_RenderQueue >= 3000)
@@ -653,6 +721,13 @@ namespace Pico
 							}
 
 							SetMergedFloat(-1, floatPropertyItem.id, floatPropertyItem.value);
+							break;
+						case AvatarFloatSemantic.Cutoff:
+							floatPropertyItem.has_value = true;
+							if (floatPropertyItem.value > 0.0)
+							{
+								mat_alphaTest = true;
+							}
 							break;
 						default:
 							break;
@@ -1082,6 +1157,17 @@ namespace Pico
 				       pav_AvatarRenderMaterial_GetVector4(renderMaterialHandle, propertyID, ref val);
 			}
 
+			// add by lingzhaojun
+            internal bool LoadVector(System.IntPtr renderMaterialHandle, uint propertyID, ref Vector3 val)
+            {
+                return NativeResult.Success == pav_AvatarRenderMaterial_GetVector3(renderMaterialHandle, propertyID, ref val);
+            }
+            // add by lingzhaojun
+            internal bool LoadVector(System.IntPtr renderMaterialHandle, uint propertyID, ref Vector2 val)
+            {
+                return NativeResult.Success == pav_AvatarRenderMaterial_GetVector2(renderMaterialHandle, propertyID, ref val);
+            }
+
 			#endregion
 
 
@@ -1214,6 +1300,9 @@ namespace Pico
 				// AvatarShaderType "_ShaderType"; default : 0.0
 				[MarshalAs(UnmanagedType.I4)] public uint shaderType;
 
+				// OfficialShaderTheme "_ShaderTheme"; default : 0.0
+				[MarshalAs(UnmanagedType.I4)] public uint shaderTheme;
+				
 				// render queue; default : -1
 				[MarshalAs(UnmanagedType.I4)] public int renderQueue;
 
@@ -1253,6 +1342,9 @@ namespace Pico
 			[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
 			private static extern NativeResult pav_AvatarRenderMaterial_GetInt(System.IntPtr nativeHandle,
 				uint propertyID, ref int val);
+
+			[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+            private static extern NativeResult pav_AvatarRenderMaterial_GetVector2(System.IntPtr nativeHandle, uint propertyID, ref Vector2 val);
 
 			[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
 			private static extern NativeResult pav_AvatarRenderMaterial_GetVector3(System.IntPtr nativeHandle,

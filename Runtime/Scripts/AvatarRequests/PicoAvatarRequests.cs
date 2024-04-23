@@ -1,5 +1,4 @@
 ﻿using System;
-
 namespace Pico
 {
 	namespace Avatar
@@ -7,8 +6,7 @@ namespace Pico
 		// Request for load avatar.      
 		public class LoadAvatarRequest : AsyncRequestBase
 		{
-			public static long DoRequest(string userId, string avatarId, string capabilities,
-				System.Action<long, int, string> responsed = null)
+			public static void DoRequest(string userId, string avatarId, string capabilities, string characterType, string characterVersion)
 			{
 				var req = new LoadAvatarRequest();
 				var args = req.invokeArgumentTable;
@@ -16,7 +14,8 @@ namespace Pico
 				args.SetStringParam(0, userId.ToString());
 				args.SetStringParam(1, avatarId);
 				args.SetStringParam(2, capabilities);
-
+				args.SetStringParam(3, characterType);
+				args.SetStringParam(4, characterVersion);
 				////test
 				////{
 				//    var bytes = new byte[1024];
@@ -38,28 +37,23 @@ namespace Pico
 						//
 
 						var avatarBase = PicoAvatarManager.instance.GetAvatar(userId);
-						if (avatarBase != null)
+						if (avatarBase == null)
 						{
 							if (errorCode == 0)
 							{
-								responsed?.Invoke(req.requestId, (int)errorCode, returnData);
+								AvatarEnv.Log(DebugLogMask.GeneralError,
+									"LoadAvatarRequest returned but avatar with same id has been added!");
 							}
 							else
 							{
 								AvatarEnv.Log(DebugLogMask.GeneralError,
 									String.Format("LoadAvatarRequest failed. errorCode:{0} reason:{1}", errorCode,
 										returnData));
-								responsed?.Invoke(req.requestId, (int)errorCode, returnData);
 							}
 						}
-						else
-						{
-							AvatarEnv.Log(DebugLogMask.GeneralError,
-								"LoadAvatarRequest returned but avatar with same id has been added!");
-						}
-
+						
 						// Note: only avatar spec data arrived, avatar grpahics data has not been ready!
-						PicoAvatarManager.instance.ProcessAvatarLoadRequest(req.requestId, userId, (int)errorCode,
+						PicoAvatarManager.instance.ProcessAvatarLoadRequest(userId, (int)errorCode,
 							returnData);
 					}
 					else
@@ -68,7 +62,6 @@ namespace Pico
 							"LoadAvatarRequest failed since PicoAvatarManager destroyed!");
 					}
 				});
-				return req.requestId;
 			}
 
 			// constructor.
@@ -84,8 +77,7 @@ namespace Pico
 		// Request for load avatar with json.    
 		public class LoadAvatarWithJsonSpecRequest : AsyncRequestBase
 		{
-			public static long DoRequest(string userId, string jsonSpecdata, string capabilities,
-				System.Action<long, int, string> responsed = null)
+			public static void DoRequest(string userId, string jsonSpecdata, string capabilities)
 			{
 				var req = new LoadAvatarWithJsonSpecRequest();
 				//
@@ -102,27 +94,26 @@ namespace Pico
 						uint errorCode = 1;
 						returnParams.GetUIntParam(0, ref errorCode);
 						var returnData = returnParams.GetStringParam(1);
-
 						var avatarBase = PicoAvatarManager.instance.GetAvatar(userId);
-						if (avatarBase != null)
+						if (avatarBase == null)
 						{
 							if (errorCode == 0)
 							{
-								responsed?.Invoke(req.requestId, (int)errorCode, returnData);
+								AvatarEnv.Log(DebugLogMask.GeneralError,
+									"LoadAvatarWithJsonSpecRequest returned but avatar with same id has been added!");
 							}
 							else
 							{
-								responsed?.Invoke(req.requestId, (int)errorCode, returnData);
+								AvatarEnv.Log(DebugLogMask.GeneralError,
+									String.Format("LoadAvatarWithJsonSpecRequest failed. errorCode:{0} reason:{1}", errorCode,
+										returnData));
 							}
 						}
-
 						// Note: only avatar spec data arrived, avatar grpahics data has not been ready!
-						PicoAvatarManager.instance.ProcessAvatarLoadRequest(req.requestId, userId, (int)errorCode,
+						PicoAvatarManager.instance.ProcessAvatarLoadRequest(userId, (int)errorCode,
 							returnData);
 					}
 				});
-				//
-				return req.requestId;
 			}
 
 			private LoadAvatarWithJsonSpecRequest() : base(_Attribte)
@@ -138,7 +129,7 @@ namespace Pico
 		// Request verify app token.
 		public class VerifyAppTokenRequest : AsyncRequestBase
 		{
-			public static long DoRequest(System.Action<uint, string> callback = null)
+			public static void DoRequest(System.Action<uint, string> callback = null)
 			{
 				var req = new VerifyAppTokenRequest();
 				//
@@ -164,8 +155,6 @@ namespace Pico
 						callback(errorCode, returnData);
 					}
 				});
-				//
-				return req.requestId;
 			}
 
 			private VerifyAppTokenRequest() : base(_Attribte)
@@ -177,10 +166,45 @@ namespace Pico
 				, ((uint)NativeCallFlags.Async | (uint)NativeCallFlags.NeedReturn | (uint)NativeCallFlags.NotReuse));
 		}
 
+		// Request app mode
+		public class VerifyAppModeRequest : AsyncRequestBase
+		{
+			public static void DoRequest(string appID, System.Action<int, int> callback = null)
+			{
+				var req = new VerifyAppModeRequest();
+				//
+				var args = req.invokeArgumentTable;
+				//
+				args.SetStringParam(0, appID);
+				//args.SetStringParam(1, jsonSpecdata);
+				//
+				req.DoApply((IDParameterTable returnParams, NativeCaller invoker) =>
+				{
+					uint errorCode = 1;
+					returnParams.GetUIntParam(0, ref errorCode);
+					var type = returnParams.GetStringParam(1);
+
+					//
+					if (callback != null)
+					{
+						callback((int)errorCode, int.Parse(type));
+					}
+				});
+			}
+
+			private VerifyAppModeRequest() : base(_Attribte)
+			{
+			}
+
+			// request invoker attribute.
+			private static NativeCallerAttribute _Attribte = new NativeCallerAttribute("AvatarRequest", "VerifyAppMode"
+				, ((uint)NativeCallFlags.Async | (uint)NativeCallFlags.NeedReturn | (uint)NativeCallFlags.NotReuse));
+		}
+		
 		// Request for Template Avatar list.
 		public class RequestTemplateAvatarRequest : AsyncRequestBase
 		{
-			public static long DoRequest(System.Action<NativeResult, string> responsed = null)
+			public static void DoRequest(System.Action<NativeResult, string> responsed = null)
 			{
 				var req = new RequestTemplateAvatarRequest();
 				//
@@ -198,8 +222,6 @@ namespace Pico
 						responsed?.Invoke((NativeResult)errorCode, returnData);
 					}
 				});
-				//
-				return req.requestId;
 			}
 
 			//
@@ -216,7 +238,7 @@ namespace Pico
 		// Request for Character list.
 		public class RequestCharacterListRequest : AsyncRequestBase
 		{
-			public static long DoRequest(System.Action<NativeResult, string> responsed = null)
+			public static void DoRequest(System.Action<NativeResult, string> responsed = null)
 			{
 				var req = new RequestCharacterListRequest();
 				//
@@ -234,8 +256,6 @@ namespace Pico
 						responsed?.Invoke((NativeResult)errorCode, returnData);
 					}
 				});
-				//
-				return req.requestId;
 			}
 
 			//
@@ -252,7 +272,7 @@ namespace Pico
 		// Request for AvatarList in Character.
 		public class RequestAvatarListInCharacterRequest : AsyncRequestBase
 		{
-			public static long DoRequest(string characterId, System.Action<NativeResult, string> responsed = null)
+			public static void DoRequest(string characterId, System.Action<NativeResult, string> responsed = null)
 			{
 				var req = new RequestAvatarListInCharacterRequest();
 				//
@@ -272,8 +292,6 @@ namespace Pico
 						responsed?.Invoke((NativeResult)errorCode, returnData);
 					}
 				});
-				//
-				return req.requestId;
 			}
 
 			//

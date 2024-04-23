@@ -5,7 +5,7 @@
 		// Request for download asset.
 		public class DownloadAssetRequest : AsyncRequestBase
 		{
-			public static long DoRequest(string assetId, uint assetType,
+			public static void DoRequest(string assetId, uint assetType,
 				System.Action<NativeResult, string> responsed = null)
 			{
 				var req = new DownloadAssetRequest(assetId);
@@ -25,8 +25,6 @@
 						responsed?.Invoke((NativeResult)errorCode, returnData);
 					}
 				}, true);
-				//
-				return req.requestId;
 			}
 
 			//
@@ -42,7 +40,7 @@
 		// Request for capture avatar preview: head/half/full
 		public class UpdateAvatarPreviewRequest : AsyncRequestBase
 		{
-			public static long DoRequest(string headImagePath, string halfImagePath, string fullImagePath,
+			public static void DoRequest(string headImagePath, string halfImagePath, string fullImagePath,
 				System.Action<NativeResult, string> responsed = null)
 			{
 				var req = new UpdateAvatarPreviewRequest();
@@ -64,8 +62,6 @@
 						responsed?.Invoke((NativeResult)errorCode, returnData);
 					}
 				});
-				//
-				return req.requestId;
 			}
 
 			//
@@ -82,7 +78,7 @@
 		// Request for general msg to sdk
 		public class CustomRequest : AsyncRequestBase
 		{
-			public static long DoRequest(string jsonData, System.Action<long, int, string> responsed = null)
+			public static void DoRequest(string jsonData, System.Action<int, string> responsed = null)
 			{
 				var req = new CustomRequest();
 				var args = req.invokeArgumentTable;
@@ -95,10 +91,9 @@
 						returnParams.GetUIntParam(0, ref errorCode);
 						var returnData = returnParams.GetUTF8StringParam(1);
 
-						responsed?.Invoke(req.requestId, (int)errorCode, returnData);
+						responsed?.Invoke((int)errorCode, returnData);
 					}
 				}, true);
-				return req.requestId;
 			}
 
 			private CustomRequest() : base(_Attribte)

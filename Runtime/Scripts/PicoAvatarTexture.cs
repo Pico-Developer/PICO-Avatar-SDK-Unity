@@ -451,6 +451,10 @@ namespace Pico
 			private bool Create(TextureInfo textureInfo, bool isLinear)
 			{
 				_textureInfo = textureInfo;
+				if (textureInfo.version > 0)
+				{
+					isLinear = textureInfo.sRGB == 0 ? true : false;
+				}
 				// check size.
 				if (textureInfo.width == 0 || textureInfo.height == 0)
 				{

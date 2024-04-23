@@ -150,7 +150,7 @@ namespace Pico
 			/// <returns>object has been reference increased.</returns>
 			internal static AvatarMeshBuffer CreateAndRefMeshBuffer(System.IntPtr nativeRenderMeshHandle,
 				bool needTangent,
-				bool allowGpuDataCompressed, bool depressSkin)
+				bool allowGpuDataCompressed, bool depressSkin, bool useCustomMaterial)
 			{
 				if (nativeRenderMeshHandle == System.IntPtr.Zero)
 				{
@@ -183,7 +183,7 @@ namespace Pico
 				avatarMeshBuffer = new AvatarMeshBuffer(meshCacheKey);
 				//
 				if (!avatarMeshBuffer.Create(nativeRenderMeshHandle, meshInfo, needTangent, allowGpuDataCompressed,
-					    depressSkin))
+					    depressSkin, useCustomMaterial))
 				{
 					avatarMeshBuffer.CheckDelete();
 					return null;
@@ -208,13 +208,13 @@ namespace Pico
 			/// <param name="depressSkin"></param>
 			/// <returns></returns>
 			private bool Create(System.IntPtr nativeRenderMeshHandle, MeshInfo meshInfo_, bool needTangent,
-				bool allowGpuDataCompressed, bool depressSkin)
+				bool allowGpuDataCompressed, bool depressSkin, bool useCustomMaterial)
 			{
 				// keep a meshInfo data.
 				meshInfo = meshInfo_;
 
 				// create unity mesh.
-				CreateMesh(nativeRenderMeshHandle, needTangent, depressSkin);
+				CreateMesh(nativeRenderMeshHandle, needTangent, depressSkin, useCustomMaterial);
 
 				// initialize morph and skin buffer.
 				if (_mesh != null)
@@ -237,7 +237,7 @@ namespace Pico
 			/// <param name="nativeRenderMeshHandle"></param>
 			/// <param name="needTangent"></param>
 			/// <param name="depressSkin"></param>
-			protected void CreateMesh(System.IntPtr nativeRenderMeshHandle, bool needTangent, bool depressSkin)
+			protected void CreateMesh(System.IntPtr nativeRenderMeshHandle, bool needTangent, bool depressSkin, bool useCustomMaterial)
 			{
 				if (_mesh != null)
 				{
@@ -303,6 +303,9 @@ namespace Pico
 				//
 				var nativeRenderMeshAbstract = new MeshData();
 				nativeRenderMeshAbstract.indices = s_tmpIndicePointers;
+
+				// get info from material, current mesh use custom or official?
+                nativeRenderMeshAbstract.useCustomMaterial = useCustomMaterial ? (byte)1 : (byte)0;
 
 				unsafe
 				{

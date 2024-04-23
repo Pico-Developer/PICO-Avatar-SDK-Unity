@@ -92,7 +92,7 @@ namespace Pico.Avatar.Sample
             OnDispose();
         }
 
-        private void OnAvatarLoaded(PicoAvatar avatar, long requestId, int errorCode, string msg)
+        private void OnAvatarLoaded(PicoAvatar avatar, int errorCode, string msg)
         {
             if (errorCode != 0)
                 return;
@@ -417,7 +417,7 @@ namespace Pico.Avatar.Sample
                 _mirroredAvatarSkeleton.UpdateUnityTransformsFromNative();
             }
 
-            var renderMeshes = source.transform.GetComponentsInChildren<PicoAvatarRenderMesh>(true);
+            var renderMeshes = source.transform.GetComponentsInChildren<PicoPrimitiveRenderMesh>(true);
 
             for (int i = 0; i < renderMeshes.Length; ++i)
             {
@@ -429,6 +429,14 @@ namespace Pico.Avatar.Sample
                 renderTrans.localPosition = sourceRenderMesh.transform.localPosition;
                 renderTrans.localRotation = sourceRenderMesh.transform.localRotation;
                 renderTrans.localScale = sourceRenderMesh.transform.localScale;
+
+                renderTrans.gameObject.SetActive(sourceRenderMesh.transform.gameObject.activeSelf);
+                
+                if (renderTrans.gameObject.activeSelf == false 
+                    && (sourceRenderMesh.primitive.nodeTypes & (uint)AvatarNodeTypes.Head) == 1)
+                {
+                    renderTrans.gameObject.SetActive(true);
+                }
 
                 var renderer = sourceRenderMesh.meshRenderer;
                 var skinMeshRenderer = sourceRenderMesh.skinMeshRenderer;

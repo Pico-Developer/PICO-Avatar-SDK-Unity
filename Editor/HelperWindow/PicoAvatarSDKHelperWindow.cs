@@ -18,7 +18,7 @@ public class PicoAvatarSDKHelperWindow : EditorWindow
     private VisualElement oncallPanelClose;
     private VisualElement copyBtn;
     
-    private const string DocsUrl = "https://bytedance.larkoffice.com/docx/Egn6da0tGo4weixwp4LcqjnsnEh";
+    private const string DocsUrl = "";
     private const string FAQUrl = "https://bytedance.feishu.cn/docx/doxcnLdBONyNxcojmZV7QWN8xvh";
 
     [MenuItem("AvatarSDK/Show Helper", false, 2)]
@@ -74,7 +74,7 @@ public class PicoAvatarSDKHelperWindow : EditorWindow
 
     private void OnDocBtnClick(ClickEvent evt)
     {
-        Application.OpenURL(DocsUrl);
+        //Application.OpenURL(DocsUrl);
     }
 
     private void OnFAQBtnClick(ClickEvent evt)

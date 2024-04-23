@@ -129,6 +129,8 @@
 					_rmiObject.Release();
 					_rmiObject = null;
 				}
+
+				_assetChangedCallback = null;
 			}
 
 			/// <summary>
@@ -390,6 +392,10 @@
 					{
 						this.isChangingAsset = false;
 						//
+						if (_assetChangedCallback != null)
+						{
+							_assetChangedCallback(errorCode);
+						}
 						if (callback != null)
 						{
 							callback(errorCode, errorDesc);
@@ -421,6 +427,10 @@
 				{
 					this.isChangingAsset = false;
 					//
+					if (_assetChangedCallback != null)
+					{
+						_assetChangedCallback(errorCode);
+					}
 					if (callback != null)
 					{
 						callback(errorCode, errorDesc);
@@ -453,11 +463,20 @@
 				{
 					this.isChangingAsset = false;
 					//
+					if (_assetChangedCallback != null)
+					{
+						_assetChangedCallback(errorCode);
+					}
 					if (callback != null)
 					{
 						callback(errorCode, errorDesc);
 					}
 				});
+			}
+
+			public void SetAssetChangedCallback(System.Action<NativeResult> assetChangedCallback)
+			{
+				_assetChangedCallback = assetChangedCallback;
 			}
 
 			#endregion
@@ -483,6 +502,8 @@
 			private System.Action<NativeResult> _enterStateFinishCallback = null;
 
 			private System.Action<string> _avatarSpecificationChangedCallback = null;
+			
+			private System.Action<NativeResult> _assetChangedCallback = null;
 			//
 
 			#endregion

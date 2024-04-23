@@ -5,7 +5,7 @@
 		// Request for remove asset.
 		public class RemoveAssetRequest : AsyncRequestBase
 		{
-			public static long DoRequest(string assetId, System.Action<NativeResult, string> callback = null)
+			public static void DoRequest(string assetId, System.Action<NativeResult, string> callback = null)
 			{
 				var req = new RemoveAssetRequest(assetId);
 				//
@@ -23,8 +23,6 @@
 						callback((NativeResult)errorCode, returnData);
 					}
 				}, true);
-				//
-				return req.requestId;
 			}
 
 			//

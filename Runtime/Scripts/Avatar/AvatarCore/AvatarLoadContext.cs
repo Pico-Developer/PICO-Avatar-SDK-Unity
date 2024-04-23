@@ -101,29 +101,27 @@ namespace Pico
 			/// Send native load request
 			/// </summary>
 			/// <returns>request success or not</returns>
-			internal bool DoRequest()
+			internal bool DoRequest(string characterType = default, string characterVersion = default)
 			{
 				//
 				string capabilitiesData = capabilities.ToJson();
-				long requestId = -1;
 				//
 				if (!string.IsNullOrEmpty(jsonConfig))
 				{
-					requestId = Pico.Avatar.LoadAvatarWithJsonSpecRequest.DoRequest(userId, jsonConfig,
-						capabilitiesData, null);
+					Pico.Avatar.LoadAvatarWithJsonSpecRequest.DoRequest(userId, jsonConfig,
+						capabilitiesData);
 				}
 				else if (avatarId != null)
 				{
-					requestId = Pico.Avatar.LoadAvatarRequest.DoRequest(userId, avatarId, capabilitiesData, null);
+					Pico.Avatar.LoadAvatarRequest.DoRequest(userId, avatarId, capabilitiesData, characterType, characterVersion);
 				}
 				else
 				{
 					AvatarEnv.Log(DebugLogMask.GeneralError,
 						"AvatarLoadContext DoRequest filed, jsonConfig and avatarId are both null !");
-					requestId = -1;
+					return false;
 				}
-
-				return requestId != -1;
+				return true;
 			}
 
 			#endregion

@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using UnityEditor;
 
 namespace Pico
 {
@@ -888,8 +889,36 @@ namespace Pico
 
 				return list;
 			}
-
 			#endregion
+			
+			
+
+#if UNITY_EDITOR
+			#region nation utility
+			[MenuItem("AvatarSDK/NationType/CN")]
+			public static void SetChina()
+			{
+				PlayerPrefs.SetInt("NationSelect", (int)NationType.China);
+			}
+
+			[MenuItem("AvatarSDK/NationType/OverSea")]
+			public static void SetOverSea()
+			{
+				PlayerPrefs.SetInt("NationSelect", (int)NationType.Oversea);
+			}
+			[MenuItem("AvatarSDK/NationType/OverSea", true)]
+			public static bool CheckCN()
+			{
+				Menu.SetChecked("AvatarSDK/NationType/CN", GetPCNation() == NationType.China);
+				Menu.SetChecked("AvatarSDK/NationType/OverSea", GetPCNation() == NationType.Oversea);
+				return true;
+			}
+			public static NationType GetPCNation()
+			{
+				return (NationType)PlayerPrefs.GetInt("NationSelect", 1);;
+			}
+			#endregion
+#endif
 		}
 	}
 }

@@ -186,7 +186,9 @@ namespace Pico
 					Destroy();
 					yield break;
 				}
-
+				
+				AvatarEnv.Log(DebugLogMask.GeneralInfo, string.Format("PicoAvatarApp.instance.renderSettings.useCustomMaterial is {0}.",PicoAvatarApp.instance.renderSettings.useCustomMaterial));
+				
 				int accumYieldCount = 0;
 				int PrimLoadYieldCount = owner.owner.allowBlockFrameWhenLoading ? 100 : 4;
 

@@ -1,4 +1,4 @@
-Shader "PAV/URP/OnlyDiffuse"
+Shader "PAV/URP/PicoNPR"
 {
     Properties
     {
@@ -21,17 +21,13 @@ Shader "PAV/URP/OnlyDiffuse"
 
         _Cutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
 
-        _Smoothness("Smoothness", Range(0.0, 1.0)) = 0.5
+        _Smoothness("Smoothness", Range(1.0, 1.0)) = 1.0
         _GlossMapScale("Smoothness Scale", Range(0.0, 1.0)) = 1.0
         _SmoothnessTextureChannel("Smoothness texture channel", Float) = 0
 
-        _Metallic("Metallic", Range(0.0, 1.0)) = 0.0
-        _MetallicGlossMap("Metallic", 2D) = "white" {}
+        _Metallic("Metallic", Range(1.0, 1.0)) = 1.0
+        _MetallicGlossMap("Metallic", 2D) = "black" {}
 
-        _SpecColor("Specular", Color) = (0.2, 0.2, 0.2)
-        _SpecGlossMap("Specular", 2D) = "white" {}
-
-        [ToggleOff] _SpecularHighlights("Specular Highlights", Float) = 1.0
         [ToggleOff] _EnvironmentReflections("Environment Reflections", Float) = 1.0
 
         _BaseColorAmplify("BaseColorAmplify", Float) = 0.8
@@ -142,6 +138,7 @@ Shader "PAV/URP/OnlyDiffuse"
 
             // -------------------------------------
             // Universal Pipeline keywords
+            #pragma multi_compile _ _ALPHATEST_ON
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
             ///#pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS

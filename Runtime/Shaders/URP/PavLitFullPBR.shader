@@ -1,8 +1,8 @@
-﻿Shader "PAV/URP/FullPBR"
+﻿Shader "PAV/URP/PicoPBR"
 {
     Properties
     {
-        _ShaderType("_ShaderType", Float) = 0
+        [Enum(Pico.Avatar.AvatarShaderType)]_ShaderType("ShaderType", Float) = 0
         // Specular vs Metallic workflow
         [KeywordEnum(URP_STANDARD, UBERSTANDARD, UBERSKIN, UBERHAIR, UBERFABRIC, UBEREYE, NPRSTANDARD, NPRSKIN, NPRHAIR, NPRFABRIC, NPREYE)] PAV_LITMODE("Lit mode", Float) = 0
         [HideInInspector] _WorkflowMode("WorkflowMode", Float) = 1.0
@@ -11,6 +11,8 @@
 
         [MainTexture] _BaseMap("Albedo", 2D) = "white" {}
          _ColorRegionMap("ColorRegionMap", 2D) = "black" {}
+         _BodyMaskMap("BodyMaskMap (not used in shader)",2D) = "black" {}
+
         _UsingAlbedoHue("UsingAlbedoHue", Float) = 0
         _ColorRegion1("ColorRegion1", Vector) = (0,0,0,0) // (H,S,V,alpha) 0~1, 0~2, 0~2, 0~1
         _ColorRegion2("ColorRegion2", Vector) = (0,0,0,0) // (H,S,V,alpha) 0~1, 0~2, 0~2, 0~1
@@ -24,18 +26,14 @@
 
         _Cutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
 
-        _Smoothness("Smoothness", Range(0.0, 1.0)) = 0.5
+        _Smoothness("Smoothness", Range(1.0, 1.0)) = 1.0
         _GlossMapScale("Smoothness Scale", Range(0.0, 1.0)) = 1.0
         _SmoothnessTextureChannel("Smoothness texture channel", Float) = 0
 
-        _Metallic("Metallic", Range(0.0, 1.0)) = 1.0
-        _MetallicGlossMap("Metallic", 2D) = "white" {}
-        _MetallicGlossMapArray("Metallic Array", 2DArray) = "white"{}
+        _Metallic("Metallic", Range(1.0, 1.0)) = 1.0
+        _MetallicGlossMap("Metallic", 2D) = "black" {}
+        _MetallicGlossMapArray("Metallic Array", 2DArray) = "black"{}
 
-        _SpecColor("Specular", Color) = (0.2, 0.2, 0.2)
-        _SpecGlossMap("Specular", 2D) = "white" {}
-
-        [ToggleOff] _SpecularHighlights("Specular Highlights", Float) = 1.0
         [ToggleOff] _EnvironmentReflections("Environment Reflections", Float) = 1.0
 
 
@@ -74,8 +72,8 @@
             [HideInInspector] _Surface("__surface", Float) = 0.0
             [HideInInspector] _Blend("__blend", Float) = 0.0
             [HideInInspector] _AlphaClip("__clip", Float) = 0.0
-            [HideInInspector] _SrcBlend("__src", Float) = 1.0
-            [HideInInspector] _DstBlend("__dst", Float) = 0.0
+            //[HideInInspector] _SrcBlend("__src", Float) = 1.0
+            //[HideInInspector] _DstBlend("__dst", Float) = 0.0
             [HideInInspector] _ZWrite("__zw", Float) = 1.0
             [HideInInspector] _Cull("__cull", Float) = 2.0
             [HideInInspector] _ColorMask("__colorMask", Float) = 15.0
@@ -136,6 +134,7 @@
             //#pragma multi_compile PAV_LITMODE_URPSTANDARD PAV_LITMODE_UBERSTANDARD PAV_LITMODE_UBERSKIN PAV_LITMODE_UBERHAIR PAV_LITMODE_UBERFABRIC PAV_LITMODE_UBEREYE PAV_LITMODE_NPRSTANDARD PAV_LITMODE_NPRSKIN PAV_LITMODE_NPRHAIR PAV_LITMODE_NPRFABRIC PAV_LITMODE_NPREYE
             #pragma multi_compile PAV_LITMODE_UBERSTANDARD
             #pragma multi_compile _ PAV_COLOR_REGION_BAKED
+            #pragma multi_compile _ _ALPHATEST_ON
 
             // -------------------------------------
             // Material Keywords

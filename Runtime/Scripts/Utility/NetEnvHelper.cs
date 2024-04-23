@@ -47,7 +47,6 @@ namespace Pico
 						: AssetServerType.Boe_OverSea;
 
 				ServerConfigDomain.TryGetValue(assetServerType, out var url);
-				Debug.Log("@@@@@@@@@@@@@@@@@@@@@@url = " + url);
 				return string.IsNullOrEmpty(url) ? string.Empty : url;
 			}
 

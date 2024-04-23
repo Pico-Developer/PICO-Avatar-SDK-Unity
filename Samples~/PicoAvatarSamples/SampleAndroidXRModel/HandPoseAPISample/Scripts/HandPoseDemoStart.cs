@@ -56,14 +56,7 @@ namespace Pico
                     CreateAvatarByUserID();
 
                 }
-
-#if UNITY_EDITOR
-                protected override void OnPicoAvatarAppStartTestModel()
-                {
-                    this.UserServiceUserID = PicoAvatarPlatformInfoTestModelUtils.UserID;
-                }
-#endif
-
+                
                 void CreateAvatarByUserID()
                 {
 

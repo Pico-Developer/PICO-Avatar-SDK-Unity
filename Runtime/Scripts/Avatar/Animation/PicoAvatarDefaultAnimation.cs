@@ -39,6 +39,8 @@ namespace Pico
 
 				AvatarMask mask = new AvatarMask(_bodyAnimController);
 				mask.SetAllJointsRotationEnable(false);
+				mask.SetAllJointsPositionEnable(false);
+				mask.SetAllJointsScaleEnable(false);
 				for (uint i = (uint)JointType.LeftHandThumbTrapezium; i < (uint)JointType.LeftHandIndexMetacarpal; ++i)
 				{
 					mask.SetJointRotationEnable((JointType)i, true);
@@ -57,6 +59,8 @@ namespace Pico
 
 				mask = new AvatarMask(_bodyAnimController);
 				mask.SetAllJointsRotationEnable(false);
+				mask.SetAllJointsPositionEnable(false);
+				mask.SetAllJointsScaleEnable(false);
 				for (uint i = (uint)JointType.RightHandThumbTrapezium;
 				     i < (uint)JointType.RightHandIndexMetacarpal;
 				     ++i)
@@ -78,6 +82,8 @@ namespace Pico
 
 				mask = new AvatarMask(_bodyAnimController);
 				mask.SetAllJointsRotationEnable(false);
+				mask.SetAllJointsPositionEnable(false);
+				mask.SetAllJointsScaleEnable(false);
 				for (uint i = (uint)JointType.LeftHandIndexMetacarpal;
 				     i < (uint)JointType.LeftHandMiddleMetacarpal;
 				     ++i)
@@ -99,6 +105,8 @@ namespace Pico
 
 				mask = new AvatarMask(_bodyAnimController);
 				mask.SetAllJointsRotationEnable(false);
+				mask.SetAllJointsPositionEnable(false);
+				mask.SetAllJointsScaleEnable(false);
 				for (uint i = (uint)JointType.RightHandIndexMetacarpal;
 				     i < (uint)JointType.RightHandMiddleMetacarpal;
 				     ++i)
@@ -120,6 +128,8 @@ namespace Pico
 
 				mask = new AvatarMask(_bodyAnimController);
 				mask.SetAllJointsRotationEnable(false);
+				mask.SetAllJointsPositionEnable(false);
+				mask.SetAllJointsScaleEnable(false);
 				for (uint i = (uint)JointType.LeftHandMiddleMetacarpal;
 				     i < (uint)JointType.RightHandThumbMetacarpal;
 				     ++i)
@@ -142,6 +152,8 @@ namespace Pico
 
 				mask = new AvatarMask(_bodyAnimController);
 				mask.SetAllJointsRotationEnable(false);
+				mask.SetAllJointsPositionEnable(false);
+				mask.SetAllJointsScaleEnable(false);
 				for (uint i = (uint)JointType.RightHandMiddleMetacarpal; i < (uint)JointType.RightHandPinkyTip; ++i)
 				{
 					mask.SetJointRotationEnable((JointType)i, true);

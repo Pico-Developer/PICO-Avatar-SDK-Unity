@@ -13,11 +13,16 @@ MonoBehaviour:
   m_Name: URPMaterialConfiguration
   m_EditorClassIdentifier: 
   renderPipelineType: 2
-  lodMaterial0: {fileID: 2100000, guid: d95380059b04f4038a22b18051fceb94, type: 2}
-  lodMaterial1: {fileID: 2100000, guid: cbdf5f935605e438a8a60d7cc5a3c328, type: 2}
-  lodMaterial2: {fileID: 2100000, guid: 70c1a55b3d07e4ef8a4a78a73a6d4b0d, type: 2}
-  lodMaterial3: {fileID: 2100000, guid: 70c1a55b3d07e4ef8a4a78a73a6d4b0d, type: 2}
-  lodMaterial4: {fileID: 2100000, guid: 65b5ea7787106461e8d92702e0489c17, type: 2}
+  lodPBRMaterial0: {fileID: 2100000, guid: e64c1fd118527b540af27c3af833188f, type: 2}
+  lodPBRMaterial1: {fileID: 2100000, guid: e64c1fd118527b540af27c3af833188f, type: 2}
+  lodPBRMaterial2: {fileID: 2100000, guid: 375e3eee19a056942b2a8999e74accca, type: 2}
+  lodPBRMaterial3: {fileID: 2100000, guid: 375e3eee19a056942b2a8999e74accca, type: 2}
+  lodPBRMaterial4: {fileID: 2100000, guid: 375e3eee19a056942b2a8999e74accca, type: 2}
+  lodNPRMaterial0: {fileID: 2100000, guid: 93fa860149b76774594e79abb0650cf7, type: 2}
+  lodNPRMaterial1: {fileID: 2100000, guid: 93fa860149b76774594e79abb0650cf7, type: 2}
+  lodNPRMaterial2: {fileID: 2100000, guid: bf23b38376ac69e4d85297c4e6637820, type: 2}
+  lodNPRMaterial3: {fileID: 2100000, guid: bf23b38376ac69e4d85297c4e6637820, type: 2}
+  lodNPRMaterial4: {fileID: 2100000, guid: bf23b38376ac69e4d85297c4e6637820, type: 2}
   avatarBunchShader: {fileID: 4800000, guid: 8d22163533f587045a40f53b886f979d, type: 3}
   hairKKMaterial0: {fileID: 2100000, guid: a79899827e11af24e93e3989acda8150, type: 2}
   shaderVariantCollection: {fileID: 20000000, guid: e5df3bec2ac8e4a1ea1b05b67eea6776,

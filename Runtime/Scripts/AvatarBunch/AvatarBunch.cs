@@ -558,8 +558,8 @@ namespace Pico
                 {
                     var primitiveRenderMesh = x.Value.primitiveRenderMesh;
                     if(primitiveRenderMesh == null || primitiveRenderMesh.avatarMeshBuffer == null ||
-                        primitiveRenderMesh.renderMaterials == null ||
-                        primitiveRenderMesh.renderMaterials.Length == 0 ||
+                        primitiveRenderMesh.officialRenderMaterials == null ||
+                        primitiveRenderMesh.officialRenderMaterials.Length == 0 ||
                         primitiveRenderMesh.avatarMeshBuffer.meshInfo.positionCount == 0 ||
                         primitiveRenderMesh.avatarMeshBuffer.meshInfo.boneNameCount == 0)
                     {
@@ -575,13 +575,13 @@ namespace Pico
 					if (materialProvider != null)
 					{
 						primitiveBunch.material = materialProvider.GetBunchPrimitiveMaterial(this, x.Value,
-							primitiveRenderMesh.renderMaterials[0].GetRuntimeMaterial(primitiveRenderMesh));
+							primitiveRenderMesh.officialRenderMaterials[0].GetRuntimeMaterial(primitiveRenderMesh));
 					}
 
 					// if failed to create a material, use default one.
 					if (primitiveBunch.material == null)
 					{
-						primitiveBunch.material = primitiveRenderMesh.renderMaterials[0]
+						primitiveBunch.material = primitiveRenderMesh.officialRenderMaterials[0]
 							.GetRuntimeMaterial(primitiveRenderMesh);
 						primitiveBunch.material.shader = avatarBunchShader;
 					}

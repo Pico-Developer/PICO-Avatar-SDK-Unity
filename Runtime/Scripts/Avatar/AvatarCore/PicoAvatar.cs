@@ -5,6 +5,9 @@ using System.IO;
 using System.Text;
 using System.IO.Compression;
 using System;
+using UnityEngine.UIElements;
+using System.Linq;
+using UnityEngine.PlayerLoop;
 
 namespace Pico
 {
@@ -169,7 +172,15 @@ namespace Pico
 			/// Object loading and destruction under Step need to be controlled by yourself
 			/// Be sure to destroy the object before destroying the avatar to prevent abnormalities or resource leakage 
 			/// </summary>
-			public JointType[] criticalJoints;
+			public JointType[] criticalJoints
+			{
+				get=>_criticalJoints;
+				set
+				{
+					_criticalJoints = value;
+					_criticalJointsDirty = true;
+				}
+			}
 
 			/// <summary>
 			/// Whether enable block frame when build all avatar primitives in unity
@@ -193,6 +204,8 @@ namespace Pico
 			/// Whether force update skeleton even when no primitive visible. for avatar bunch item, maybe no primitive created
 			/// </summary>
 			public bool forceUpdateSkeleton = false;
+
+			internal bool forceUpdateSkeletonFromNative = false;
 
 			#endregion
 
@@ -313,13 +326,13 @@ namespace Pico
 			/// <returns>GameObject of joint</returns>
 			public GameObject GetJointObject(JointType jointType)
 			{
-				if (criticalJointObjects == null || criticalJoints == null)
+				if (criticalJointObjects == null || _criticalJoints == null)
 					return null;
-				for (int i = 0; i < criticalJoints.Length; i++)
+				for (int i = 0; i < _criticalJoints.Length; i++)
 				{
-					if (jointType == criticalJoints[i])
+					if (jointType == _criticalJoints[i])
 					{
-						if (criticalJointObjects.Length > i)
+						if (criticalJointObjects.Count > i)
 							return criticalJointObjects[i];
 						break;
 					}
@@ -687,8 +700,15 @@ namespace Pico
 			//
 			private AvatarEditState _avatarEditState = null;
 
-			private GameObject[] criticalJointObjects;
-			private XForm[] criticalJointXForms;
+            [HideInInspector]
+            // public GameObject[] criticalJointObjects;
+			public List<GameObject> criticalJointObjects = new List<GameObject>();
+
+            private XForm[] _jointXForms;
+
+			private JointType[] _criticalJoints;
+
+			private bool _criticalJointsDirty = true;
 
 			// Native handle.
 			private System.IntPtr _nativeHandle;
@@ -911,7 +931,7 @@ namespace Pico
 				sex = avatarSex;
 				this.avatarStyleName = styleName;
 
-				// If previous avatar entitiy created, need destroy first.
+				// If previous avatar entity created, need destroy first.
 				if (entity != null)
 				{
 					//
@@ -941,7 +961,7 @@ namespace Pico
 			/// </summary>
 			/// <param name="avatarEntity"></param>
 			/// <param name="curLodLevel"></param>
-			virtual internal void Notify_AvatarEntityLodReadyToShow(AvatarEntity avatarEntity,
+			internal virtual void Notify_AvatarEntityLodReadyToShow(AvatarEntity avatarEntity,
 				AvatarLodLevel curLodLevel)
 			{
 				//
@@ -972,6 +992,35 @@ namespace Pico
 				//
 				UpdateNativeAvatarMovementWithUnityXForm();
 
+				//build initial critical joints
+                var length = 0;
+				if (_criticalJoints != null) 
+				{
+					length = _criticalJoints.Length;
+				}
+				
+                if (length > 0 && _criticalJointsDirty)
+                {
+					foreach(var go in criticalJointObjects)
+					{
+						Destroy(go);
+					}
+					criticalJointObjects.Clear();
+					var rootTran = entity.transform;
+					for (var i = 0; i < length; ++i)
+					{
+						GameObject go = new GameObject(_criticalJoints[i].ToString());
+						criticalJointObjects.Add(go);
+						var curTran = go.transform;
+						curTran.parent = rootTran;
+						curTran.localScale = Vector3.one;
+					}						
+                }
+				_criticalJointsDirty = false;
+				//force update skeleton from native
+                forceUpdateSkeletonFromNative = true;
+
+
 				//
 				if (_entityReadyCallbacks != null)
 				{
@@ -993,14 +1042,32 @@ namespace Pico
 				}
 			}
 
-			/// <summary>
-			/// Notification from js when failed to load avatar entity lod level
-			/// </summary>
-			/// <param name="nativeEntityId"></param>
-			/// <param name="lodLevel"></param>
-			internal void Notify_OnEntityLodLevelLoadFailed(uint nativeEntityId, AvatarLodLevel lodLevel)
-			{
-				// Log the failed message.
+
+            public void AddCriticalJoint(JointType jointType)
+            {
+                GameObject go = GetJointObject(jointType);
+                if (!go)
+                {
+                    List<JointType> joints = _criticalJoints.ToList();
+                    joints.Add(jointType);
+                    _criticalJoints = joints.ToArray();
+
+                    GameObject jointObject = new GameObject(jointType.ToString());
+                    jointObject.transform.parent = entity.transform;
+                    jointObject.transform.localScale = Vector3.one;
+
+                    criticalJointObjects.Add(jointObject);
+                }
+            }
+
+            /// <summary>
+            /// Notification from js when failed to load avatar entity lod level
+            /// </summary>
+            /// <param name="nativeEntityId"></param>
+            /// <param name="lodLevel"></param>
+            internal void Notify_OnEntityLodLevelLoadFailed(uint nativeEntityId, AvatarLodLevel lodLevel)
+            {
+                // Log the failed message.
 				if (AvatarEnv.NeedLog(DebugLogMask.AvatarLoad))
 				{
 					AvatarEnv.Log(DebugLogMask.AvatarLoad,
@@ -1048,36 +1115,42 @@ namespace Pico
 				{
 					entity.PostUpdateFrame(gameTime);
 
-					if (this.criticalJoints != null && this.criticalJoints.Length > 0 &&
-					    entity.bodyAnimController != null)
-					{
-						var jointIdTable = entity.bodyAnimController.jointNameIDTable;
-						var length = criticalJoints.Length;
-						if (criticalJointXForms == null)
-						{
-							criticalJointXForms = new XForm[length];
-							criticalJointObjects = new GameObject[length];
-							var rootTran = entity.transform;
-							for (var i = 0; i < length; ++i)
-							{
-								criticalJointObjects[i] = new GameObject(criticalJoints[i].ToString());
-								var curTran = criticalJointObjects[i].transform;
-								curTran.parent = rootTran;
-								curTran.localScale = Vector3.one;
-							}
-						}
+                    if (this._criticalJoints != null && this._criticalJoints.Length > 0 && entity.bodyAnimController != null)
+                    {
+						//update critical joint objects
+	                    if (_jointXForms == null || _jointXForms.Length != _criticalJoints.Length)
+	                    {
+		                    _jointXForms = new XForm[_criticalJoints.Length];
+		                    
+		                    if (_criticalJointsDirty)
+		                    {
+								//remove game objects
+								foreach(var go in criticalJointObjects)
+								{
+									Destroy(go);
+								}
+			                    criticalJointObjects.Clear();
+			                    for (var i = 0; i < _criticalJoints.Length; ++i)
+			                    {
+									GameObject go =  new GameObject(_criticalJoints[i].ToString());
+				                    criticalJointObjects.Add(go);
+				                    go.transform.parent = entity.transform;
+			                    }
+								_criticalJointsDirty = false;
+		                    }
+	                    }
 
-						entity.bodyAnimController.GetJointXForms(criticalJoints, ref criticalJointXForms);
-						for (var i = 0; i < length; ++i)
-						{
-							//criticalJointXForms[i] = entity.bodyAnimController.GetJointXForm((uint)criticalJoints[i]);
-							criticalJointObjects[i].transform.localPosition = criticalJointXForms[i].position;
-							criticalJointObjects[i].transform.localRotation = criticalJointXForms[i].orientation;
-							//criticalJointObjects[i].transform.localScale = criticalJointXForms[i].scale;
-						}
-					}
-				}
-			}
+						//update transform
+	                    entity.bodyAnimController.GetJointXForms(_criticalJoints, ref _jointXForms);
+                        for (var i = 0; i < _criticalJoints.Length; ++i)
+                        {
+	                        criticalJointObjects[i].transform.localPosition = _jointXForms[i].position;
+	                        criticalJointObjects[i].transform.localRotation = _jointXForms[i].orientation;
+	                        criticalJointObjects[i].transform.localScale = _jointXForms[i].scale;
+                        }
+                    }
+                }
+            }
 
 			/// <summary>
 			/// Notification from js when AvatarSpecification initialized
@@ -1112,6 +1185,11 @@ namespace Pico
 
 				return _isNativeVisible;
 			}
+
+			internal bool CheckNeedUpdateSimulationDataThisFrame()
+            {
+                return forceUpdateSkeletonFromNative || CheckNativeVisible();
+            }
 
 			/// <summary>
 			/// Sets avatar manager
