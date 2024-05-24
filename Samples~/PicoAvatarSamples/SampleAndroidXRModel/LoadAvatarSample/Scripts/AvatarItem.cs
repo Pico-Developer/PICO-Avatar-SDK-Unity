@@ -52,9 +52,11 @@ namespace Pico
                             avatar.PlayAnimation("idle");
                             avatar.PlayAnimation("smile", 0, "BottomLayer");
                         });
-
-                    var avatarTrans = curShowAvatar.transform;
-                    avatarTrans.parent = _characterRoot == null ? transform : _characterRoot;
+                    if (curShowAvatar != null)
+                    {
+                        var avatarTrans = curShowAvatar.transform;
+                        avatarTrans.parent = _characterRoot == null ? transform : _characterRoot;
+                    }
                 }
 
                 private void LoadTextureByUrl(string url, int timeOut = 10)

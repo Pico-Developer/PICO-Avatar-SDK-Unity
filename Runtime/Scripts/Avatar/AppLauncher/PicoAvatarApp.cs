@@ -661,16 +661,27 @@ namespace Pico
 
 			internal bool CheckRomVersion()
 			{
+				
 #if  UNITY_EDITOR
 				return true;
 #elif NO_XR
 				return true;
 #else
+				
+				if(ApplicationService.GetSystemInfo() == null)
+				{
+					Pico.Platform.CoreService.Initialize();			
+				}
 
+				if(!Pico.Platform.CoreService.IsInitialized() || ApplicationService.GetSystemInfo() == null)
+				{
+					UnityEngine.Debug.Log("pav: PicoAvatarSdk Starting. Platform core service not initialized. Please setup appid correctly.");
+						return false;
+				}
+				
 				string ROMVersion = ApplicationService.GetSystemInfo().ROMVersion;
 				string MatrixVersionName = ApplicationService.GetSystemInfo().MatrixVersionName;
 				long MatrixVersionCode = ApplicationService.GetSystemInfo().MatrixVersionCode;
-
 				UnityEngine.Debug.Log(string.Format(
 						"pav: PicoAvatarSdk Starting. ROMVersion:{0}  MatrixVersionName:{1}  MatrixVersionCode:{2}",
 						ROMVersion,

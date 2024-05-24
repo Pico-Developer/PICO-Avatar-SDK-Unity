@@ -78,7 +78,7 @@ namespace Pico.Avatar
 		/// <summary>
 		/// Version of minimum matrix version
 		/// </summary>
-		[NonSerialized] public string minMatrixVersion = "6.0.0";
+		[NonSerialized] public string minMatrixVersion = "6.0.2";
 	}
 
 	/// <summary>

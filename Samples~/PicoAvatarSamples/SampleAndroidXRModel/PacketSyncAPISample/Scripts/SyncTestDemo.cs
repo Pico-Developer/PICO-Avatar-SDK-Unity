@@ -86,10 +86,8 @@ namespace Pico.Avatar.Sample
                 if (_serverTime - _lastTimeRecordPacket > PicoAvatarApp.instance.netBodyPlaybackSettings.recordInterval)
                 {
                     _lastTimeRecordPacket = _serverTime;
-                    srcAvatar.Avatar.entity.RecordPacket(_serverTime);
                     //
                     _packetMemoryView = srcAvatar.Avatar.entity.GetFixedPacketMemoryView();
-
                     _newPacketRecorded = true;
                 }
             }

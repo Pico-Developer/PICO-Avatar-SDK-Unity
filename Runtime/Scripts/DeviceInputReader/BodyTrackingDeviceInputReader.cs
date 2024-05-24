@@ -520,11 +520,11 @@ namespace Pico
 {
 	namespace Avatar
 	{
+		/// <summary>
+		/// BodyTrackingDeviceInputReader
+		/// </summary>
 		public class BodyTrackingDeviceInputReader : PXRDeviceInputReader
 		{
-			/**
-             * @brief body tracking input data
-             */
 			[StructLayout(LayoutKind.Sequential, Pack = 4)]
 			struct BodyTrackingData
 			{
@@ -556,7 +556,7 @@ namespace Pico
             ///   true - calibration completed;
             ///   false - calibration uncompleted, need to launch the "PICO Motion Tracker" app for calibration.
             /// </returns>
-			public bool IsCalibrated
+            public bool IsCalibrated
 			{
 				get
 				{

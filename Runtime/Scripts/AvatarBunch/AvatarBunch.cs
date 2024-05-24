@@ -168,9 +168,11 @@ namespace Pico
 						AvatarEnv.Log(DebugLogMask.GeneralError, "Failed to load bunch avatar.");
 					}
 				});
-
-				// no need to show the source avatar.
-				_avatar.gameObject.SetActive(false);
+				if (_avatar != null)
+				{
+					// no need to show the source avatar.
+					_avatar.gameObject.SetActive(false);
+				}
 			}
 
 

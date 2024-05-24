@@ -252,6 +252,8 @@ namespace Pico.Avatar.Sample
             else
                 avatar = PicoAvatarManager.instance.LoadAvatar(new AvatarLoadContext(userId, this.avatarID, null, capability), callback, characterType);
 
+            if (avatar == null)
+                return;
             avatar.criticalJoints = this.criticalJoints;
 
             var avatarEntity = avatar.entity;

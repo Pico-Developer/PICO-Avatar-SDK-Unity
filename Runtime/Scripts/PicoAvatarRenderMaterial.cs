@@ -1299,9 +1299,6 @@ namespace Pico
 
 				// AvatarShaderType "_ShaderType"; default : 0.0
 				[MarshalAs(UnmanagedType.I4)] public uint shaderType;
-
-				// OfficialShaderTheme "_ShaderTheme"; default : 0.0
-				[MarshalAs(UnmanagedType.I4)] public uint shaderTheme;
 				
 				// render queue; default : -1
 				[MarshalAs(UnmanagedType.I4)] public int renderQueue;
@@ -1317,8 +1314,8 @@ namespace Pico
 
 				[MarshalAs(UnmanagedType.I1)] public byte colorMask;
 
-				// reserved
-				[MarshalAs(UnmanagedType.I4)] uint reserved0;
+				// OfficialShaderTheme "_ShaderTheme"; default : 0.0
+				[MarshalAs(UnmanagedType.I4)] public uint shaderTheme;
 
 				// reserved
 				[MarshalAs(UnmanagedType.I4)] uint reserved1;
