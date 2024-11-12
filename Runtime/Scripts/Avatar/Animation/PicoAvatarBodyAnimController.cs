@@ -126,6 +126,11 @@ namespace Pico
 			public bool isUsingBodyTracking { get; private set; } = false;
 
 			/// <summary>
+			/// Whether update the unity xForm of avatar entity from native
+			/// </summary>
+			internal bool needUpdateEntityUnityXFormFromNative { get; set; } = true;
+
+			/// <summary>
 			/// Whether animator is enabled. 
 			/// </summary>
 			public bool isAnimatorEnabled
@@ -201,7 +206,7 @@ namespace Pico
 			/// <summary>
 			/// Get list of transforms of avatar joints in avatar space
 			/// </summary>
-			/// <param name="jointType">list of jointTypes</param>
+			/// <param name="jointTypes">list of jointTypes</param>
 			/// <param name="xforms">Returned value of joint transforms</param>
 			public void GetJointXForms(JointType[] jointTypes, ref XForm[] xforms)
 			{
@@ -224,7 +229,8 @@ namespace Pico
 			/// <summary>
 			/// Set world orientation for a list of joints.
 			/// </summary>
-			/// <param name="jointType">list of jointTypes</param>
+			/// <param name="count">list of count</param>
+			/// <param name="jointTypes">list of jointTypes</param>
 			/// <param name="jointQuats">Value of joint orientations</param>
 			public void SetWorldOrientation(uint count, JointType[] jointTypes, Quaternion[] jointQuats)
 			{
@@ -244,7 +250,7 @@ namespace Pico
 			/// <summary>
 			/// In body tracking mode, call this function to enable or disable body tracking at run time.
 			/// </summary>
-			/// <param name="enabled">true - enable, false - disable</param>
+			/// <param name="useBodyTracking">true - enable, false - disable</param>
 			public void SetUseBodyTracking(bool useBodyTracking)
 			{
 				isUsingBodyTracking = useBodyTracking;
@@ -308,8 +314,7 @@ namespace Pico
 			/// <summary>
 			/// Whether blend with idle face animation in face tracking mode
 			/// </summary>
-			/// <param name="enableLipSync">Whether enable lip sync</param>
-			/// <param name="enableFT">Whether enable face tracking </param>
+			/// <param name="useIdle">Whether in idle</param>
 			public void SetIdleEnable(bool useIdle)
 			{
 				if (_rmiObject != null)
@@ -617,8 +622,10 @@ namespace Pico
 			//late update 
 			internal void PostUpdateFrame()
 			{
-				// TODO: add a switch to open this
-				UpdateAvtarEntityUnityXFormFromNative();
+				if (needUpdateEntityUnityXFormFromNative)
+				{
+					UpdateAvtarEntityUnityXFormFromNative();
+				}
 
 				if (_autoFitController != null)
 				{

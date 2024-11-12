@@ -73,7 +73,7 @@ public class PicoAvatarSDKHelperWindow : EditorWindow
 
     private void OnDocBtnClick(ClickEvent evt)
     {
-        if (Utility.GetPCNation() == NationType.China)
+        if (Utility.IsCnDevice())
         {
             Application.OpenURL(DocsUrl_CN);
         }

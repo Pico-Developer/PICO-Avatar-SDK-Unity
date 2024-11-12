@@ -1,11 +1,99 @@
 ﻿using System;
 using UnityEngine;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 
 namespace Pico
 {
 	namespace Avatar
 	{
+		public static class AvatarConstants
+		{
+			static AvatarConstants()
+			{
+				s_officialShaderNameThemes = new Dictionary<string, OfficialShaderTheme>()
+				{
+					{ "PAV/URP/PicoPBR", OfficialShaderTheme.PicoPBR },
+					{ "PAV/URP/PicoNPR", OfficialShaderTheme.PicoNPR },
+					{ "PicoAvatar/AvatarLit", OfficialShaderTheme.PicoAvatarLit },
+					{ "PicoAvatar/Skin", OfficialShaderTheme.PicoAvatarSkin },
+					{ "PicoAvatar/Hair", OfficialShaderTheme.PicoAvatarHair },
+					{ "PicoAvatar/Eye", OfficialShaderTheme.PicoAvatarEye },
+					{ "PicoAvatar/SimpleLit", OfficialShaderTheme.PicoAvatarSimpleLit },
+					{ "PicoAvatar/Bake", OfficialShaderTheme.PicoAvatarBake },
+				};
+				s_officialShaderThemeNames = new Dictionary<OfficialShaderTheme, string>();
+				foreach (var pair in s_officialShaderNameThemes)
+				{
+					s_officialShaderThemeNames.Add(pair.Value, pair.Key);
+				}
+
+				s_shaderNames = new Dictionary<string, string>()
+				{
+					{ "PBR", "PAV/URP/PicoPBR" },
+					{ "NPR", "PAV/URP/PicoNPR" },
+					{ "Unlit", "PAV/URP/Unlit" },
+					{ "AvatarLit", "PicoAvatar/AvatarLit" },
+					{ "AvatarSkin", "PicoAvatar/Skin" },
+					{ "AvatarHair", "PicoAvatar/Hair" },
+					{ "AvatarEye", "PicoAvatar/Eye" },
+					{ "AvatarSimpleLit", "PicoAvatar/SimpleLit" },
+					{ "AvatarBake", "PicoAvatar/Bake" },
+				};
+				s_shaderType1s = new Dictionary<string, string>();
+				foreach (var pair in s_shaderNames)
+				{
+					s_shaderType1s.Add(pair.Value, pair.Key);
+				}
+				s_officialMaterialThemePostfixes = new Dictionary<OfficialShaderTheme, string>()
+				{
+					{ OfficialShaderTheme.PicoPBR, "_officialPBR" },
+					{ OfficialShaderTheme.PicoNPR, "_officialNPR" },
+					{ OfficialShaderTheme.PicoAvatarLit, "_Official_AvatarLit" },
+					{ OfficialShaderTheme.PicoAvatarSkin, "_Official_AvatarSkin" },
+					{ OfficialShaderTheme.PicoAvatarHair, "_Official_AvatarHair" },
+					{ OfficialShaderTheme.PicoAvatarEye, "_Official_AvatarEye" },
+					{ OfficialShaderTheme.PicoAvatarSimpleLit, "_Official_AvatarSimpleLit" },
+					{ OfficialShaderTheme.PicoAvatarBake, "_Official_AvatarBake" },
+				};
+				s_officialShaderTextures = new Dictionary<string, List<string>>()
+				{
+					{ "AvatarLit", new List<string>() { "BaseTex" } },
+					{ "AvatarSkin", new List<string>() { "BaseTex" } },
+					{ "AvatarHair", new List<string>() { "BaseTex" } },
+					{ "AvatarEye", new List<string>() { "BaseTex" } },
+					{ "AvatarSimpleLit", new List<string>() { "BaseTex" } },
+					{ "AvatarBake", new List<string>() { "BaseTex" } },
+				};
+				s_keywordPair = new Dictionary<string, string>()
+				{
+					{ "_Tonemapping", "_ACES" },
+				};
+			}
+
+			public static Dictionary<string, OfficialShaderTheme> s_officialShaderNameThemes = null;
+			public static Dictionary<OfficialShaderTheme, string> s_officialShaderThemeNames = null;
+
+			public static Dictionary<string, string> s_shaderNames = null;
+
+			public static Dictionary<string, string> s_shaderType1s = null;
+
+			public static Dictionary<OfficialShaderTheme, string> s_officialMaterialThemePostfixes = null;
+
+			public static Dictionary<string, List<string>> s_officialShaderTextures = null;
+
+			public static Dictionary<string, string> s_keywordPair = null;
+		};
+
+		public static class AvatarManager
+		{
+			public static bool IsAvatarLitShader(OfficialShaderTheme theme)
+            {
+				return theme >= OfficialShaderTheme.PicoAvatarLit && theme != OfficialShaderTheme.Invalid;
+            }
+		}
+
+
 		// All const number placed here.
 		internal enum Consts
 		{
@@ -16,117 +104,121 @@ namespace Pico
 		/// <summary>
 		/// Operation error code from native call
 		/// </summary>
-		public enum NativeResult : int
+		public enum NativeResult
 		{
-			/// <summary>
-			/// Success
-			/// </summary>
+
 			Success = 0,
+		    Failed = -1,
 
-			/// <summary>
-			/// Unknown
-			/// </summary>
-			Unknown = -1,
-
-			/// <summary>
-			/// OutOfMemory
-			/// </summary>
-			OutOfMemory = -2,
-
-			/// <summary>
-			/// NotInitialized
-			/// </summary>
-			NotInitialized = -3,
-
-			/// <summary>
-			/// AlreadyInitialized
-			/// </summary>
-			AlreadyInitialized = -4,
-
-			/// <summary>
-			/// BadParameter
-			/// </summary>
-			BadParameter = -5,
-
-			/// <summary>
-			/// Unsupported
-			/// </summary>
-			Unsupported = -6,
-
-			/// <summary>
-			/// NotFound
-			/// </summary>
-			NotFound = -7,
-
-			/// <summary>
-			/// AlreadyExists
-			/// </summary>
-			AlreadyExists = -8,
-
-			/// <summary>
-			/// IndexOutOfRange
-			/// </summary>
-			IndexOutOfRange = -9,
-
-			/// <summary>
-			/// BadProgram
-			/// </summary>
-			BadProgram = -10,
-
-			/// <summary>
-			/// InvalidObject
-			/// </summary>
-			InvalidObject = -21,
-
-			/// <summary>
-			/// InvalidState
-			/// </summary>
-			InvalidState = -22,
-
-			/// <summary>
-			/// BufferTooSmall
-			/// </summary>
-			BufferTooSmall = -32,
-
-			/// <summary>
-			/// DataNotAvailable
-			/// </summary>
-			DataNotAvailable = -33,
-
-			/// <summary>
-			/// InvalidData
-			/// </summary>
-			InvalidData = -34,
-
-			/// <summary>
-			/// Pending
-			/// </summary>
-			Pending = -37,
-
-			/// <summary>
-			/// TypeError
-			/// </summary>
-			TypeError = -44,
-
-			/// <summary>
-			/// NetError
-			/// </summary>
-			NetError = -51,
-
-			/// <summary>
-			/// MismatchVersion
-			/// </summary>
-			MismatchVersion = -52,
-
-			/// <summary>
-			/// OperationCanceled
-			/// </summary>
-			OperationCanceled = -60,
-
-			/// <summary>
-			/// FatalError
-			/// </summary>
-			FatalError = -100,
+		    //CommonError
+		    NotInitialized = 1000,
+		    AlreadyInitialized,
+		    MismatchVersion,
+		    CreateFailed,
+		    NullReferenceObject,
+		    LoadObjectFailed,
+		    ParameterError,
+		    NotImplemented,
+		    OperationPending,
+		    OperationCanceled,
+		    InvalidType,
+		    IndexOutOfRange,
+		    Unsupported,
+		    ParameterNotFound,
+		    MaterialPropertyNotFound,
+		    TransformNotFound,
+		    FileNotFound,
+		    InvalidState,
+		    InvalidData,
+		    FatalError,
+		    NativeControllerNotFound,
+		    SkeletonNotTPose,
+		    DataNotFound,
+		    ObjectNotExist,
+		    ObjectAlreadyDeleted,
+		    DuplicatedObject,
+		    ObjectStillInUse,
+		    SaveDataFailed,
+		    //Shader/Material Error
+		    MaterialAlreadyExist = 1501,
+		    PresetTraitAlreadyExist,
+		    //BodyTrackingError
+		    DeviceInputReaderNotFound= 1701,
+		    //LoadAvatarError
+		    OnlyOneMainAvatar = 2301,
+		    AvatarAlreadyExist,
+		    AvatarLodAlreadyExist,
+		    AvatarEntityAlreadyExist,
+		    WrongBakingType,
+		    LoadedIdNotSameWithParamId,
+		    BakedAvatarConfigNotFound,
+		    AvatarConfigNotFound,
+		    BothConfigNotFound,
+		    MainObjectAlreadyDestroyed,
+		    AvatarLodDataLoadFailed,
+		    SpecGraphIsEmpty,
+		    SpecGraphNodeIsEmpty,
+		    SkeletonNotReady,
+		    SkeletonLoadFailed,
+		    SkeletonDataNotFound,
+		    SocketJointNameIsNull,
+		    SocketProtoNotFound,
+		    CreateJointLinkerFailed,
+		    CachedClipedBodyDataCorrupted,
+		    ClipMeshWithTextureFailed,
+		    LoadAvatarFailed,
+		    AvatarAlreadyUnloaded,
+		    UnloadAvatarFailed,
+		    AvatarIdIsInvalid,
+		    AvatarLoadContextExist,
+		    LastDressUpNotFinished,
+		    AvatarNotFound,
+		    ConfigJsonNotFound,
+		    BasebodyNotFound,
+		    MeshesNotFound,
+		    StyleSchemaNotFound,
+		    BakedAvatarLodDataNotExist,
+		    NeedEnabledAllowEdit,
+		    AvatarMaskLoadFailed,
+		    //AnimationError
+		    AnimationSetAssetNotReady = 2501,
+		    AnimationSetDataNotFound,
+		    AnimatorIsNull,
+		    AnimazLoadFailed,
+		    AddAnimationSetFailed,
+		    ClipNotFound,
+		    ClipStillInUse,
+		    LoadAnimationFailed,
+		    AddAnimationFailed,
+		    //NetworkError
+		    NetworkRequestFailed = 2701,
+		    NetworkRequestCanceled,
+		    NetworkServiceNotWorking,
+		    //LoadAssetError
+		    LoadAssetMetasFailed = 2901,
+		    RepeatAddAssets,
+		    RepeatAddStyleAssetSet,
+		    AssetBundleNotExist,
+		    LodLevelInvalid,
+		    LodMetaNotFound,
+		    AssetLodLevelNotExist,
+		    LoadLodLevelDataFailed,
+		    LoadAssetBundleFailed,
+		    LocalDataFileCorrupted,
+		    LoadAssetFailed,
+		    LoadZipFileFailed,
+		    WriteAssetBundleCacheFailed,
+		    AssetDataConfigIsWrong,
+		    AvatarVersionAndLodVersionMismatch,
+		    LoadManifestFailed,
+		    LoadSubAssetFailed,
+		    ManifestAsJsonIsNull,
+		    MakeupMaterialNotFound,
+		    LodLevelDataAlreadyExist,
+		    BatchAssetIdFailed,
+		    //MemoryError
+		    OutOfMemory = 3101,
+		    BufferTooSmall,
 		}
 
 		// target engine type. Unity/Unreal/AmazingEngine./...
@@ -389,7 +481,13 @@ namespace Pico
 		public enum OfficialShaderTheme
 		{
 			PicoPBR = 0,
-			PicoNPR = 1,
+			PicoNPR,
+			PicoAvatarLit = 2,
+			PicoAvatarSkin,
+			PicoAvatarHair,
+			PicoAvatarEye,
+			PicoAvatarSimpleLit,
+			PicoAvatarBake,
 			Invalid = 100
 		}
 
@@ -588,6 +686,9 @@ namespace Pico
 			public sbyte wrapModeT;
 			public sbyte wrapModeR;
 			public sbyte maxAnisotropy;
+
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+			public byte[] md5;
 		};
 
 		// A slice of texture data used to fill content of a texture slice.
@@ -714,6 +815,28 @@ namespace Pico
 		};
 
 		[StructLayout(LayoutKind.Sequential, Pack = 4)]
+		public struct MergedMeshInfo
+		{
+            [MarshalAs(UnmanagedType.U1)] public byte version;
+            [MarshalAs(UnmanagedType.U1)] public byte weight8;
+            [MarshalAs(UnmanagedType.U1)] public byte reserved2;
+            [MarshalAs(UnmanagedType.U1)] public byte reserved3;
+            public uint positionCount;
+            public uint tangentCount;
+            public uint colorCount;
+            public uint uv1Count;
+            public uint uv2Count;
+            public uint uv3Count;
+            public uint uv4Count;
+            public uint indexCount;
+			public uint boneCount;
+			public uint rootBoneNameHash;
+			public Vector3 boundCenter;
+			public Vector3 boundSize;
+			// public bool boneHas8Weights;
+		};
+
+		[StructLayout(LayoutKind.Sequential, Pack = 4)]
 		public struct MeshExtraInfo
 		{
 			[MarshalAs(UnmanagedType.I1)] public byte version;
@@ -800,6 +923,29 @@ namespace Pico
 			public System.IntPtr blendShapeDeltaNormals;
 			public System.IntPtr blendShapeDeltaTangents;
 		};
+
+		[StructLayout(LayoutKind.Sequential, Pack = 4)]
+		public struct MergedMeshRawData
+		{
+            [MarshalAs(UnmanagedType.U1)] public byte version;
+			[MarshalAs(UnmanagedType.ByValArray, ArraySubType = UnmanagedType.U1, SizeConst = 3)]
+			public byte[] reserved;
+            [MarshalAs(UnmanagedType.U4)] public uint reserveInt;
+            public System.IntPtr positions;
+			public System.IntPtr normals;
+			public System.IntPtr tangents;
+			public System.IntPtr colors;
+			public System.IntPtr uv1;
+			public System.IntPtr uv2;
+			public System.IntPtr uv3;
+			public System.IntPtr uv4;
+			public System.IntPtr materialIndices;
+			public System.IntPtr invBindPoses;
+			public System.IntPtr boneWeights;
+			// public System.IntPtr bonesPerVertex;
+			public System.IntPtr boneNameHashes;
+			public System.IntPtr indices;
+		}
 
 		// SkeletonPalette Information.
 		[StructLayout(LayoutKind.Sequential, Pack = 4)]

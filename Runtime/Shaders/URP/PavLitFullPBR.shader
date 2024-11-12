@@ -1,4 +1,4 @@
-﻿Shader "PAV/URP/PicoPBR"
+﻿Shader"PAV/URP/PicoPBR"
 {
     Properties
     {
@@ -19,7 +19,6 @@
         _ColorRegion3("ColorRegion3", Vector) = (0,0,0,0) // (H,S,V,alpha) 0~1, 0~2, 0~2, 0~1
         _ColorRegion4("ColorRegion4", Vector) = (0,0,0,0) // (H,S,V,alpha) 0~1, 0~2, 0~2, 0~1
 
-        _BaseMapArray("Albedo Array", 2DArray) = "white"{}
         [MainColor] _BaseColor("Color", Color) = (1,1,1,1)
         _OutlineColor("OutlineColor", Color) = (0,0,0,1)
         
@@ -32,16 +31,21 @@
 
         _Metallic("Metallic", Range(1.0, 1.0)) = 1.0
         _MetallicGlossMap("Metallic", 2D) = "black" {}
-        _MetallicGlossMapArray("Metallic Array", 2DArray) = "black"{}
 
+        _SpecColor("Specular", Color) = (0.2, 0.2, 0.2)
+        _SpecGlossMap("Specular", 2D) = "white" {}
+
+        [ToggleOff] _SpecularHighlights("Specular Highlights", Float) = 1.0
         [ToggleOff] _EnvironmentReflections("Environment Reflections", Float) = 1.0
 
+
+        _SpecularAAScreenSpaceVariance("Specular AA Screen Space Variance", Range(0,1)) = 0.1
+        _SpecularAAThreshold("Specular AA Threshold", Range(0,1)) = 0.2
 
         _BaseColorAmplify("BaseColorAmplify", Float) = 1.0
 
         _BumpScale("Scale", Float) = 1.0
         _BumpMap("Normal Map", 2D) = "bump" {}
-        _BumpMapArray("Normal Array", 2DArray) = "bump"{}
 
         _Parallax("Scale", Range(0.005, 0.08)) = 0.005
         _ParallaxMap("Height Map", 2D) = "black" {}
@@ -64,43 +68,59 @@
 
         _MipBias("_MipBias", Float) = -1
 
+        _CustomVec_0("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_1("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_2("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_3("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_4("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_5("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_6("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_7("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_8("", Vector) = (0.0, 0.0, 0.0, 0.0)
+
+        // For static mesh batching
+        [HideInInspector] _BaseMapArray("BaseMap Array", 2DArray) = "white"{}
+        [HideInInspector] _ColorRegionMapArray("ColorRegionMap Array", 2DArray) = "white"{}
+        [HideInInspector] _BumpMapArray("BumpMap Array", 2DArray) = "bump"{}
+        [HideInInspector] _MetallicGlossMapArray("MetallicGlossMap Array", 2DArray) = "black"{}
+
         // SRP batching compatibility for Clear Coat (Not used in Lit)
         [HideInInspector] _ClearCoatMask("_ClearCoatMask", Float) = 0.0
         [HideInInspector] _ClearCoatSmoothness("_ClearCoatSmoothness", Float) = 0.0
 
-            // Blending state
-            [HideInInspector] _Surface("__surface", Float) = 0.0
-            [HideInInspector] _Blend("__blend", Float) = 0.0
-            [HideInInspector] _AlphaClip("__clip", Float) = 0.0
-            //[HideInInspector] _SrcBlend("__src", Float) = 1.0
-            //[HideInInspector] _DstBlend("__dst", Float) = 0.0
-            [HideInInspector] _ZWrite("__zw", Float) = 1.0
-            [HideInInspector] _Cull("__cull", Float) = 2.0
-            [HideInInspector] _ColorMask("__colorMask", Float) = 15.0
+        // Blending state
+        [HideInInspector] _Surface("__surface", Float) = 0.0
+        [HideInInspector] _Blend("__blend", Float) = 0.0
+        [HideInInspector] _AlphaClip("__clip", Float) = 0.0
+        //[HideInInspector] _SrcBlend("__src", Float) = 1.0
+        //[HideInInspector] _DstBlend("__dst", Float) = 0.0
+        [HideInInspector] _ZWrite("__zw", Float) = 1.0
+        [HideInInspector] _Cull("__cull", Float) = 2.0
+        [HideInInspector] _ColorMask("__colorMask", Float) = 15.0
 
-            _ReceiveShadows("Receive Shadows", Float) = 1.0
-            // Editmode props
-            [HideInInspector] _QueueOffset("Queue offset", Float) = 0.0
+        _ReceiveShadows("Receive Shadows", Float) = 1.0
+        // Editmode props
+        [HideInInspector] _QueueOffset("Queue offset", Float) = 0.0
 
-            // ObsoleteProperties
-            [HideInInspector] _MainTex("BaseMap", 2D) = "white" {}
-            [HideInInspector] _Color("Base Color", Color) = (1, 1, 1, 1)
-            [HideInInspector] _GlossMapScale("Smoothness", Float) = 0.0
-            [HideInInspector] _Glossiness("Smoothness", Float) = 0.0
-            [HideInInspector] _GlossyReflections("EnvironmentReflections", Float) = 0.0
+        // ObsoleteProperties
+        [HideInInspector] _MainTex("BaseMap", 2D) = "white" {}
+        [HideInInspector] _Color("Base Color", Color) = (1, 1, 1, 1)
+        [HideInInspector] _GlossMapScale("Smoothness", Float) = 0.0
+        [HideInInspector] _Glossiness("Smoothness", Float) = 0.0
+        [HideInInspector] _GlossyReflections("EnvironmentReflections", Float) = 0.0
 
-            [HideInInspector][NoScaleOffset]unity_Lightmaps("unity_Lightmaps", 2DArray) = "" {}
-            [HideInInspector][NoScaleOffset]unity_LightmapsInd("unity_LightmapsInd", 2DArray) = "" {}
-            [HideInInspector][NoScaleOffset]unity_ShadowMasks("unity_ShadowMasks", 2DArray) = "" {}
+        [HideInInspector][NoScaleOffset]unity_Lightmaps("unity_Lightmaps", 2DArray) = "" {}
+        [HideInInspector][NoScaleOffset]unity_LightmapsInd("unity_LightmapsInd", 2DArray) = "" {}
+        [HideInInspector][NoScaleOffset]unity_ShadowMasks("unity_ShadowMasks", 2DArray) = "" {}
 
-            // PAV_CustomData1("PAV_CustomData1", Vector) = (0,0,0,0)
-            // PAV_CustomData2("PAV_CustomData2", Vector) = (0,0,0,0)
-            // PAV_CustomData3("PAV_CustomData3", Vector) = (0,0,0,0)
-            // PAV_CustomData4("PAV_CustomData4", Vector) = (0,0,0,0)
-            [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend ("Src Blend", Float) = 1
-		    [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend ("Dst Blend", Float) = 0
-            [Enum(UnityEngine.Rendering.BlendMode)] _SrcAlphaBlend ("Src Alpha Blend", Float) = 1
-		    [Enum(UnityEngine.Rendering.BlendMode)] _DstAlphaBlend ("Dst Alpha Blend", Float) = 0
+        // PAV_CustomData1("PAV_CustomData1", Vector) = (0,0,0,0)
+        // PAV_CustomData2("PAV_CustomData2", Vector) = (0,0,0,0)
+        // PAV_CustomData3("PAV_CustomData3", Vector) = (0,0,0,0)
+        // PAV_CustomData4("PAV_CustomData4", Vector) = (0,0,0,0)
+        [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend ("Src Blend", Float) = 1
+        [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend ("Dst Blend", Float) = 0
+        [Enum(UnityEngine.Rendering.BlendMode)] _SrcAlphaBlend ("Src Alpha Blend", Float) = 1
+        [Enum(UnityEngine.Rendering.BlendMode)] _DstAlphaBlend ("Dst Alpha Blend", Float) = 0
     }
 
     SubShader
@@ -177,10 +197,14 @@
             // GPU Instancing
             //#pragma multi_compile_instancing
             //#pragma multi_compile _ DOTS_INSTANCING_ON
+            //#pragma enable_d3d11_debug_symbols
+
+            // For static mesh batching
+            #pragma multi_compile _ _ENABLE_STATIC_MESH_BATCHING
 
             #pragma vertex LitPassVertex
             #pragma fragment LitPassFragment
-
+    
             #include "./Universal/Shaders/PavLitInput.hlsl"
             #include "./Universal/Shaders/PavLitForwardPass.hlsl"
             ENDHLSL

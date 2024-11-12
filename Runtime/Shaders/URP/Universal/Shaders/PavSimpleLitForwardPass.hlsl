@@ -13,6 +13,9 @@ struct Attributes
 #if defined(_SECOND_BASEMAP)
     float2 uv2           : TEXCOORD2;
 #endif
+#if defined(_ENABLE_STATIC_MESH_BATCHING)
+    float2 mtlIndex     : TEXCOORD4;
+#endif
     UNITY_VERTEX_INPUT_INSTANCE_ID
     PAV_VERTEX_ID
 };
@@ -66,6 +69,10 @@ struct Varyings
 
 #if defined(_SECOND_BASEMAP)
     float2 uv2                      : TEXCOORD8;
+#endif
+
+#if defined(_ENABLE_STATIC_MESH_BATCHING)
+    nointerpolation float2 mtlIndex : TEXCOORD9;
 #endif
 
     float4 positionCS               : SV_POSITION;
@@ -167,8 +174,13 @@ Varyings LitPassVertexSimple(Attributes input)
     half3 vertexLight = VertexLighting(vertexInput.positionWS, normalInput.normalWS);
     half fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
 
+#ifdef _ENABLE_STATIC_MESH_BATCHING
+    output.uv.xy = input.texcoord;
+    output.mtlIndex = input.mtlIndex;
+#else
     output.uv.xy = TRANSFORM_TEX(input.texcoord, _BaseMap); 
     PAV_GET_MATERIAL_INDEX(input.vid, output.uv);
+#endif
 
 #if defined(_SECOND_BASEMAP)
     output.uv2 = input.uv2;
@@ -245,20 +257,28 @@ half4 LitPassFragmentSimple(Varyings input) : SV_Target
 
 #else // #ifdef PAV_AVATAR_LOD_OUTLINE
 
+#ifdef _ENABLE_STATIC_MESH_BATCHING
+    mtlIndex = (uint)input.mtlIndex.x;
+    currentData.u1 = _MtlData[mtlIndex].uniform1;
+#else
     PAV_GET_MATERIAL_DATA(input.uv.z);
+#endif
     PAV_GET_SECOND_UV(input);
     PAV_GET_CUTOFF(cutoff);
     PAV_GET_BASE_COLOR(baseColor);
     PAV_GET_SPEC_COLOR(specColor);
     PAV_GET_EMISSION_COLOR(emissionColor);
     PAV_GET_SHADER_TYPE(shaderType);
-
+    PAV_GET_USING_ALBEDO_HUE(usingAlbedoHue);
 
     float2 uv = input.uv.xy;
     half4 diffuseAlpha = PAV_SAMPLE_ALBEDO_ALPHA(uv);
     half4 colorRegions = PAV_SAMPLE_COLOR_REGIONS(uv);
-    PAV_GET_USING_ALBEDO_HUE(usingAlbedoHue);
-    half3 diffuse = ApplyAlbedo(diffuseAlpha.rgb, baseColor.rgb, shaderType, colorRegions, _ColorRegion1, _ColorRegion2, _ColorRegion3, _ColorRegion4, usingAlbedoHue); // need fix
+    PAV_GET_BASE_COLOR_MASK1(colorMask1);
+    PAV_GET_BASE_COLOR_MASK2(colorMask2);
+    PAV_GET_BASE_COLOR_MASK3(colorMask3);
+    PAV_GET_BASE_COLOR_MASK4(colorMask4);
+    half3 diffuse = ApplyAlbedo(diffuseAlpha.rgb, baseColor.rgb, shaderType, colorRegions, colorMask1, colorMask2, colorMask3, colorMask4, usingAlbedoHue); // need fix
     half alpha = diffuseAlpha.a * baseColor.a;
     AlphaDiscard(alpha, cutoff);
 
@@ -288,10 +308,10 @@ half4 LitPassFragmentSimple(Varyings input) : SV_Target
     }
 
     half4 color = UniversalFragmentBlinnPhong(inputData, diffuse, specular, smoothness, emission, alpha, occlusion
-#ifdef PAV_ToonShadowMap
-    , toonShadowAlbedo
- #endif
-);
+	#ifdef PAV_ToonShadowMap
+		, toonShadowAlbedo
+	 #endif
+	);
 
     color.rgb = MixFog(color.rgb, inputData.fogCoord);
     color.a = OutputAlpha(color.a, _Surface);
@@ -311,9 +331,13 @@ half4 LitPassFragmentSimplest(Varyings input) : SV_Target
     UNITY_SETUP_INSTANCE_ID(input);
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
+#if _ENABLE_STATIC_MESH_BATCHING
+    mtlIndex = (uint)input.mtlIndex.x;
+#endif
+    float2 uv = input.uv.xy;
+
     PAV_GET_BASE_COLOR(baseColor);
 
-    float2 uv = input.uv.xy;
     half4 diffuseAlpha = PAV_SAMPLE_ALBEDO_ALPHA(uv);
     half4 diffuse = diffuseAlpha * baseColor;// ApplyAlbedo(diffuseAlpha.rgb, baseColor.rgb, shaderType, colorRegions, _ColorRegion1, _ColorRegion2, _ColorRegion3, _ColorRegion4, usingAlbedoHue); // need fix
 

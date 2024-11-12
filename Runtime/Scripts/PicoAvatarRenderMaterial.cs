@@ -1,8 +1,11 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using System.Collections;
+using System;
 
 namespace Pico
 {
@@ -146,6 +149,10 @@ namespace Pico
 
 		public class MaterialFloatPropertyItem : MaterialPropertyItem
 		{
+			public MaterialFloatPropertyItem()
+            {
+            }
+
 			public MaterialFloatPropertyItem(MaterialPropertyItemRaw item) : base(item)
 			{
 			}
@@ -160,6 +167,10 @@ namespace Pico
 
 		public class MaterialColorPropertyItem : MaterialPropertyItem
 		{
+			public MaterialColorPropertyItem()
+			{
+			}
+
 			public MaterialColorPropertyItem(MaterialPropertyItemRaw item) : base(item)
 			{
 			}
@@ -174,6 +185,10 @@ namespace Pico
 
 		public class MaterialVectorPropertyItem : MaterialPropertyItem
 		{
+			public MaterialVectorPropertyItem()
+            {
+            }
+
 			public MaterialVectorPropertyItem(MaterialPropertyItemRaw item) : base(item)
 			{
 			}
@@ -184,10 +199,15 @@ namespace Pico
 
 			public Vector4 value;
 			public bool has_value;
+			public bool isTetxureST;
 		}
 
 		public class MaterialTexturePropertyItem : MaterialPropertyItem
 		{
+			public MaterialTexturePropertyItem()
+			{
+			}
+
 			public MaterialTexturePropertyItem(MaterialPropertyItemRaw item) : base(item)
 			{
 				unityArrayName = $"{unityName}Array";
@@ -202,6 +222,8 @@ namespace Pico
 			public bool has_value;
 			public int unityArrayID;
 			public string unityArrayName;
+			public bool has_ST = false;
+			public Vector4 value_ST;
 		}
 
 		public class AvatarRenderMaterialDef : NativeObject
@@ -379,6 +401,8 @@ namespace Pico
 
 			#region Material properties
 
+			internal bool mat_shaderColorRegionBaked { get { return matPV_ColorRegionBaked > 0.5; } }
+
 			// AvatarShaderType "_ShaderType"; default : 0.0
 			public AvatarShaderType mat_ShaderType { get; private set; }
 			
@@ -440,14 +464,45 @@ namespace Pico
 			public bool has_BumpMap;
 			public bool has_ColorRegionBaked;
 
-			#endregion
+            #endregion
 
-			#endregion
+            #endregion
 
 
-			#region Public Methods
+            #region Public Methods
 
-			internal PicoAvatarRenderMaterial(bool merged, AvatarLod avatarLod)
+            public static PicoAvatarRenderMaterial[] CreateRenderMaterials(System.IntPtr[] renderMaterialHandles,
+                AvatarLod lod, bool merged)
+            {
+                PicoAvatarRenderMaterial[] materials = new PicoAvatarRenderMaterial[renderMaterialHandles.Length];
+                bool success = true;
+                for (int i = 0; i < materials.Length; ++i)
+                {
+                    materials[i] = new PicoAvatarRenderMaterial(merged, lod);
+                    materials[i].Retain();
+
+                    // try to load render material.
+                    if (!materials[i].LoadPropertiesFromNativeMaterial(renderMaterialHandles[i], lod.lodLevel, lod.owner.owner.capabilities.allowEdit))
+                    {
+                        success = false;
+                    }
+                }
+
+                if (!success)
+                {
+                    for (int i = 0; i < materials.Length; ++i)
+                    {
+                        materials[i]?.Release();
+                        materials[i] = null;
+                    }
+
+                    materials = null;
+                }
+
+                return materials;
+            }
+
+            internal PicoAvatarRenderMaterial(bool merged, AvatarLod avatarLod)
 			{
 				_Merged = merged;
 				_AvatarLod = avatarLod;
@@ -484,10 +539,29 @@ namespace Pico
 				{
 					_RuntimeMaterial.EnableKeyword("PAV_NO_TANGENTS");
 				}
+				_RuntimeMaterial.EnableKeyword("FLIP_Y");
 
 				//
 				return _RuntimeMaterial;
 			}
+
+			internal Material GetRuntimeMaterial(AvatarLodLevel level)
+			{
+                if (_RuntimeMaterial != null)
+                {
+                    return _RuntimeMaterial;
+                }
+
+                //
+                if (_MaterialConfig == null)
+                {
+                    return null;
+                }
+
+                // set material
+                _RuntimeMaterial = _MaterialConfig.CreateRuntimeMaterialFromNativeMaterial(this, level);
+				return _RuntimeMaterial;
+            }
 
 			// Update avatar scene light env.
 			internal void OnAvatarSceneLightEnvChanged(PicoAvatarSceneLightEnv lightEnv)
@@ -621,26 +695,55 @@ namespace Pico
 				// 	material.EnableKeyword("PAV_RIM_PROFILE");
 				// }
 
-				// PAV_COLOR_REGION_BAKED
-				{
-					if (matPV_ColorRegionBaked > 0.5f)
-					{
-						material.EnableKeyword("PAV_COLOR_REGION_BAKED");
+                // PAV_COLOR_REGION_BAKED
+                {
+					// use gpu bake for realtime, so here is not setting
+					
+					if (mat_shaderColorRegionBaked)
+                    {
+#if UNITY_2021_1_OR_NEWER
+						if (material.HasFloat(s_ColorShift))
+#else
+						if (material.HasProperty(s_ColorShift))
+#endif
+						{
+                            material.SetFloat(s_ColorShift, 0.0f);
+                            material.DisableKeyword("_COLOR_SHIFT");
+                        }
+                        material.EnableKeyword("PAV_COLOR_REGION_BAKED");
+                    }
+					else
+                    {
+#if UNITY_2021_1_OR_NEWER
+						if (material.HasFloat(s_ColorShift))
+#else
+                        if (material.HasProperty(s_ColorShift))
+#endif
+                        {
+                            if (material.GetFloat(s_ColorShift) == 1.0f)
+                            {
+                                material.EnableKeyword("_COLOR_SHIFT");
+                            }
+                            else
+                            {
+                                material.DisableKeyword("_COLOR_SHIFT");
+                            }
+                        }
 					}
 				}
 			}
-			
-            //Load material data from native render material.
-            //@param nativeHandle_ native AvatarRenderMaterial. Reference count has been added by invoker.
-            internal bool LoadPropertiesFromNativeMaterial(System.IntPtr nativeHandle_, AvatarLodLevel lodLevel)
+
+			//Load material data from native render material.
+			//@param nativeHandle_ native AvatarRenderMaterial. Reference count has been added by invoker.
+			internal bool LoadPropertiesFromNativeMaterial(System.IntPtr nativeHandle_, AvatarLodLevel lodLevel, bool allowEdit)
 			{
-				if (nativeHandle != System.IntPtr.Zero)
+				if (nativeHandle == System.IntPtr.Zero)
 				{
-					throw new System.Exception("BadProgram!");
+					// throw new System.Exception("BadProgram!");
+                    // no need to add reference count since invoker has added.
+                    SetNativeHandle(nativeHandle_, false);
 				}
 
-				// no need to add reference count since invoker has added.
-				SetNativeHandle(nativeHandle_, false);
 
 				// TODO(tianshengcai): to promote performance?
 				// config
@@ -668,107 +771,231 @@ namespace Pico
 					//mat_SmoothSource = (AvatarPBRSmoothnessSource)renderState.smoothSource;
 					mat_ColorMask = (byte)renderState.colorMask;
 				}
-				var _MaterialConfig = GetMaterialConfiguration();
+
+
+				var _MaterialConfig = GetMaterialConfiguration(); 
 				mat_RenderPipelineType = _MaterialConfig.renderPipelineType == RenderPipelineType.None
 					? RenderPipelineType.UnityURP
 					: _MaterialConfig.renderPipelineType;
-				avatarRenderMaterialDef = new AvatarRenderMaterialDef(mat_ShaderType, mat_RenderPipelineType);
-				avatarRenderMaterialDef.Retain();
 				mat_FloatPropertyItems = new List<MaterialFloatPropertyItem>();
 				mat_ColorPropertyItems = new List<MaterialColorPropertyItem>();
 				mat_VectorPropertyItems = new List<MaterialVectorPropertyItem>();
 				mat_TexturePropertyItems = new List<MaterialTexturePropertyItem>();
 
-				CheckInitialize();
-
-				// load floats
-				UpdateDirtyMaterialUniforms();
-
-				// properties process
-				ConvertMergedMaterialColorsToLinear();
-
-				// set smoothness.
-				foreach (MaterialFloatPropertyItem floatPropertyItem in mat_FloatPropertyItems)
+				if (AvatarManager.IsAvatarLitShader(mat_ShaderTheme))
 				{
-					switch ((AvatarFloatSemantic)floatPropertyItem.semantic)
+					avatarRenderMaterialDef = null;
+
+                    if (!_initialized)
+                    {
+                        // id_ShaderType = Pico.Avatar.Utility.AddNameToIDNameTable("_ShaderType");
+                        // id_SceneBlendType = Pico.Avatar.Utility.AddNameToIDNameTable("_SceneBlendType");
+                        id_BaseMap_ST = Pico.Avatar.Utility.AddNameToIDNameTable("_BaseMap_ST");
+                        id_ColorRegionBaked = Pico.Avatar.Utility.AddNameToIDNameTable("_ColorRegionBaked");
+                    }
+
+                    _initialized = true;
+
+					var material = _MaterialConfig.FetchMaterial(mat_ShaderTheme);
+					var shader = material.shader;
+
+					if (shader != null)
 					{
-						case AvatarFloatSemantic.Smoothness:
-							if (_MaterialConfig.need_BumpMap
-							    && ((lodLevel == AvatarLodLevel.Lod2 && !_MaterialConfig.isLod2NeedBumpMap) ||
-							        (lodLevel == (AvatarLodLevel)3 && !_MaterialConfig.isLod3EnablePBR)))
+						var propertyCount = shader.GetPropertyCount();
+						for (int i = 0; i < propertyCount; ++i)
+						{
+							var name = shader.GetPropertyName(i);
+							var type = shader.GetPropertyType(i);
+							if (type == UnityEngine.Rendering.ShaderPropertyType.Float
+								|| type == UnityEngine.Rendering.ShaderPropertyType.Range
+#if UNITY_2021_1_OR_NEWER
+								|| type == UnityEngine.Rendering.ShaderPropertyType.Int
+#endif
+							)
 							{
-								//TODO: temporarily set smooth to 1.
-								floatPropertyItem.value = 0.4f;
+								var item = new MaterialFloatPropertyItem();
+								item.id = Pico.Avatar.Utility.AddNameToIDNameTable(name);
+                                item.unityName = name;
+								item.unityID = Shader.PropertyToID(item.unityName);
+								item.semantic = (uint)AvatarFloatSemantic.None;
+								item.has_value = LoadFloat(nativeHandle, item.id, ref item.value);
+		
+								//Debug.Log($"Loading float from shader name {name}, {item.has_value} {item.value}");
+
+								mat_FloatPropertyItems.Add(item);
 							}
-							else
+							else if (type == UnityEngine.Rendering.ShaderPropertyType.Color)
+                            {
+								var item = new MaterialColorPropertyItem();
+								item.id = Pico.Avatar.Utility.AddNameToIDNameTable(name);
+								item.unityName = name;
+								item.unityID = Shader.PropertyToID(item.unityName);
+								item.semantic = (uint)AvatarColorSemantic.None;
+								item.has_value = LoadColor(nativeHandle, item.id, ref item.value);
+								//Debug.Log($"Loading color from shader name {name}, {item.has_value} {item.value}");
+
+								mat_ColorPropertyItems.Add(item);
+							}
+							else if (type == UnityEngine.Rendering.ShaderPropertyType.Vector)
 							{
-								//TODO: temporarily set smooth value to 0.8.
+								var item = new MaterialVectorPropertyItem();
+								item.id = Pico.Avatar.Utility.AddNameToIDNameTable(name);
+								item.unityName = name;
+								item.unityID = Shader.PropertyToID(item.unityName);
+								item.semantic = (uint)AvatarVectorSemantic.None;
+								item.has_value = LoadVector(nativeHandle, item.id, ref item.value);
+
+								//Debug.Log($" Loading vector from shader name {name}, {item.has_value} {item.value}");
+
+								mat_VectorPropertyItems.Add(item);
+							}
+							else if (type == UnityEngine.Rendering.ShaderPropertyType.Texture)
+                            {
+								var item = new MaterialTexturePropertyItem();
+								item.id = Pico.Avatar.Utility.AddNameToIDNameTable(name);
+								item.unityName = name;
+								item.unityID = Shader.PropertyToID(item.unityName);
+								item.unityArrayName = $"{item.unityName}Array";
+								item.unityArrayID = Shader.PropertyToID(item.unityArrayName);
+								item.semantic = (uint)AvatarTextureSemantic.None;
+								item.has_value = LoadTexture(nativeHandle, item.id, ref item.value, allowEdit, name != "_BaseMap");
+
+								item.value_ST = new Vector4(1, 1, 0, 0);
+								var id_ST = Pico.Avatar.Utility.AddNameToIDNameTable(name + "_ST");
+								item.has_ST = LoadVector(nativeHandle, id_ST, ref item.value_ST);
+
+								//Debug.Log($" Loading texture from shader name {name}, {item.has_value} {item.value} {item.has_ST} {item.value_ST}");
+
+								//has_BumpMap set to materialNeedTangent and PAV_NO_TANGENTS is discarded in new shader
+
+								mat_TexturePropertyItems.Add(item);
+							}
+						}
+					}
+					else
+					{
+						Debug.LogError("PicoAvatarRenderMaterial Ceating Material Error: cannot find Shader on configuration！");
+						return false;
+					}
+
+					//legacy states
+                    {
+						//TODO //TODO: move into js
+						{
+							has_ColorRegionBaked = LoadFloat(nativeHandle, id_ColorRegionBaked, ref matPV_ColorRegionBaked);
+							has_BaseMap_ST = LoadVector(nativeHandle, id_BaseMap_ST, ref matPV_BaseMap_ST);
+						}
+
+						LoadCustomVecs();
+
+						//TODO set alpah test state using dictionary
+						mat_alphaTest = false;
+						foreach (var item in mat_FloatPropertyItems)
+                        {
+							if (item.unityName == "_CutOff" && item.has_value && item.value > 0.0f)
+							{
+								mat_alphaTest = true;
+								break;
+							}
+                        }
+					}
+				}
+				else
+				{
+					avatarRenderMaterialDef = new AvatarRenderMaterialDef(mat_ShaderType, mat_RenderPipelineType);
+					avatarRenderMaterialDef.Retain();
+
+					CheckInitialize();
+
+					// load floats
+					UpdateDirtyMaterialUniforms();
+
+					// properties process
+					ConvertMergedMaterialColorsToLinear();
+
+					// set smoothness.
+					foreach (MaterialFloatPropertyItem floatPropertyItem in mat_FloatPropertyItems)
+					{
+						switch ((AvatarFloatSemantic)floatPropertyItem.semantic)
+						{
+							case AvatarFloatSemantic.Smoothness:
+								if (_MaterialConfig.need_BumpMap
+									&& ((lodLevel == AvatarLodLevel.Lod2 && !_MaterialConfig.isLod2NeedBumpMap) ||
+										(lodLevel == (AvatarLodLevel)3 && !_MaterialConfig.isLod3EnablePBR)))
+								{
+									//TODO: temporarily set smooth to 1.
+									floatPropertyItem.value = 0.4f;
+								}
+								else
+								{
+									//TODO: temporarily set smooth value to 0.8.
+									if (floatPropertyItem.value == 0.0f)
+									{
+										floatPropertyItem.value = 0.8f;
+									}
+								}
+
+								floatPropertyItem.has_value = true;
+								SetMergedFloat(-1, floatPropertyItem.id, floatPropertyItem.value);
+								break;
+							case AvatarFloatSemantic.Metallic:
+								floatPropertyItem.has_value = true;
+								//TODO: temporarily set  metallic value to 0.8.
 								if (floatPropertyItem.value == 0.0f)
 								{
 									floatPropertyItem.value = 0.8f;
 								}
-							}
 
-							floatPropertyItem.has_value = true;
-							SetMergedFloat(-1, floatPropertyItem.id, floatPropertyItem.value);
-							break;
-						case AvatarFloatSemantic.Metallic:
-							floatPropertyItem.has_value = true;
-							//TODO: temporarily set  metallic value to 0.8.
-							if (floatPropertyItem.value == 0.0f)
-							{
-								floatPropertyItem.value = 0.8f;
-							}
-
-							SetMergedFloat(-1, floatPropertyItem.id, floatPropertyItem.value);
-							break;
-						case AvatarFloatSemantic.Cutoff:
-							floatPropertyItem.has_value = true;
-							if (floatPropertyItem.value > 0.0)
-							{
-								mat_alphaTest = true;
-							}
-							break;
-						default:
-							break;
-					}
-				}
-
-				foreach (MaterialColorPropertyItem colorPropertyItem in mat_ColorPropertyItems)
-				{
-					switch ((AvatarColorSemantic)colorPropertyItem.semantic)
-					{
-						case AvatarColorSemantic.SpecColor:
-							if (colorPropertyItem.value.r < 0.001f && colorPropertyItem.value.g < 0.001f &&
-							    colorPropertyItem.value.b < 0.001f)
-							{
-								colorPropertyItem.has_value = true;
-								colorPropertyItem.value = new Color(0.05f, 0.05f, 0.05f, 0.5f);
-							}
-
-							int mergedCount = GetMergedCount();
-							for (int i = 0; i < mergedCount; ++i)
-							{
-								Color specColor = Color.white;
-								if (GetMergedColor(i, colorPropertyItem.id, ref specColor, true))
+								SetMergedFloat(-1, floatPropertyItem.id, floatPropertyItem.value);
+								break;
+							case AvatarFloatSemantic.Cutoff:
+								floatPropertyItem.has_value = true;
+								if (floatPropertyItem.value > 0.0)
 								{
-									if (specColor.r < 0.001f &&
-									    specColor.g < 0.001f &&
-									    specColor.b < 0.001f)
+									mat_alphaTest = true;
+								}
+								break;
+							default:
+								break;
+						}
+					}
+
+					foreach (MaterialColorPropertyItem colorPropertyItem in mat_ColorPropertyItems)
+					{
+						switch ((AvatarColorSemantic)colorPropertyItem.semantic)
+						{
+							case AvatarColorSemantic.SpecColor:
+								if (colorPropertyItem.value.r < 0.001f && colorPropertyItem.value.g < 0.001f &&
+									colorPropertyItem.value.b < 0.001f)
+								{
+									colorPropertyItem.has_value = true;
+									colorPropertyItem.value = new Color(0.05f, 0.05f, 0.05f, 0.5f);
+								}
+
+								int mergedCount = GetMergedCount();
+								for (int i = 0; i < mergedCount; ++i)
+								{
+									Color specColor = Color.white;
+									if (GetMergedColor(i, colorPropertyItem.id, ref specColor, true))
 									{
-										specColor = new Color(0.05f, 0.05f, 0.05f, 0.5f);
-										SetMergedColor(i, colorPropertyItem.id, specColor);
+										if (specColor.r < 0.001f &&
+											specColor.g < 0.001f &&
+											specColor.b < 0.001f)
+										{
+											specColor = new Color(0.05f, 0.05f, 0.05f, 0.5f);
+											SetMergedColor(i, colorPropertyItem.id, specColor);
+										}
 									}
 								}
-							}
 
-							break;
-						case AvatarColorSemantic.BaseColor:
-							colorPropertyItem.value = Color.white;
-							colorPropertyItem.has_value = true;
-							break;
-						default:
-							break;
+								break;
+							case AvatarColorSemantic.BaseColor:
+								colorPropertyItem.value = Color.white;
+								colorPropertyItem.has_value = true;
+								break;
+							default:
+								break;
+						}
 					}
 				}
 
@@ -778,26 +1005,30 @@ namespace Pico
 			// When  uniforms in native material changed, should synchronized to Unity material.
 			internal void UpdateDirtyMaterialUniforms()
 			{
-				for (int idx = 0; idx < avatarRenderMaterialDef.floatPropertyCount; ++idx)
-				{
-					mat_FloatPropertyItems[idx].has_value = LoadFloat(nativeHandle, mat_FloatPropertyItems[idx].id,
-						ref mat_FloatPropertyItems[idx].value);
+                for (int idx = 0; idx < mat_FloatPropertyItems.Count; ++idx)
+                {
+                    mat_FloatPropertyItems[idx].has_value = LoadFloat(nativeHandle, mat_FloatPropertyItems[idx].id,
+                        ref mat_FloatPropertyItems[idx].value);
+					//Debug.Log($" Loading float from shader name {mat_FloatPropertyItems[idx].unityName} {mat_FloatPropertyItems[idx].value}");
 				}
 
-				for (int idx = 0; idx < avatarRenderMaterialDef.colorPropertyCount; ++idx)
-				{
-					mat_ColorPropertyItems[idx].has_value = LoadColor(nativeHandle, mat_ColorPropertyItems[idx].id,
-						ref mat_ColorPropertyItems[idx].value);
+
+                for (int idx = 0; idx < mat_ColorPropertyItems.Count; ++idx)
+                {
+                    mat_ColorPropertyItems[idx].has_value = LoadColor(nativeHandle, mat_ColorPropertyItems[idx].id,
+                        ref mat_ColorPropertyItems[idx].value);
+					//Debug.Log($" Loading color from shader name {mat_ColorPropertyItems[idx].unityName} {mat_ColorPropertyItems[idx].value}");
 				}
 
-				for (int idx = 0; idx < avatarRenderMaterialDef.vectorPropertyCount; ++idx)
-				{
-					mat_VectorPropertyItems[idx].has_value = LoadVector(nativeHandle, mat_VectorPropertyItems[idx].id,
-						ref mat_VectorPropertyItems[idx].value);
-				}
+                for (int idx = 0; idx < mat_VectorPropertyItems.Count; ++idx)
+                {
+                    mat_VectorPropertyItems[idx].has_value = LoadVector(nativeHandle, mat_VectorPropertyItems[idx].id,
+                        ref mat_VectorPropertyItems[idx].value);
+                    //Debug.Log($" Loading vector from shader name {mat_VectorPropertyItems[idx].unityName} {mat_VectorPropertyItems[idx].value}");
+                }
 
-				// TODO: move into js
-				{
+                // TODO: move into js
+                {
 					has_ColorRegionBaked = LoadFloat(nativeHandle, id_ColorRegionBaked, ref matPV_ColorRegionBaked);
 					has_BaseMap_ST = LoadVector(nativeHandle, id_BaseMap_ST, ref matPV_BaseMap_ST);
 				}
@@ -826,8 +1057,10 @@ namespace Pico
 				}
 			}
 
-			internal bool LoadTexturesFromNativeMaterial(AvatarLodLevel lodLevel)
+			internal bool LoadTexturesFromNativeMaterial(AvatarLodLevel lodLevel, bool allowEdit)
 			{
+				if (AvatarManager.IsAvatarLitShader(mat_ShaderTheme)) return true;
+
 				// clear map flags.
 				has_BumpMap = false;
 
@@ -837,13 +1070,13 @@ namespace Pico
 					{
 						case AvatarTextureSemantic.BaseMap:
 							texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-								ref texturePropertyItem.value, false);
+								ref texturePropertyItem.value, allowEdit, false);
 							break;
 						case AvatarTextureSemantic.ToonShadowMap:
 							if (_MaterialConfig.need_ToonShadowMap)
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value, false);
+									ref texturePropertyItem.value, allowEdit, false);
 							}
 
 							break;
@@ -852,7 +1085,7 @@ namespace Pico
 							    _MaterialConfig.need_MetallicGlossMap)
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value, false);
+									ref texturePropertyItem.value, allowEdit, false);
 							}
 
 							break;
@@ -861,7 +1094,7 @@ namespace Pico
 							    _MaterialConfig.need_SpecGlossMap)
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value, false);
+									ref texturePropertyItem.value, allowEdit, false);
 							}
 
 							break;
@@ -870,7 +1103,7 @@ namespace Pico
 							    (lodLevel < AvatarLodLevel.Lod2 || _MaterialConfig.isLod2NeedBumpMap))
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value);
+									ref texturePropertyItem.value, allowEdit);
 								matPV_BumpMap = texturePropertyItem.value;
 								has_BumpMap = texturePropertyItem.has_value;
 							}
@@ -881,7 +1114,7 @@ namespace Pico
 							    (lodLevel < AvatarLodLevel.Lod2 || _MaterialConfig.isLod2NeedBumpMap))
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value);
+									ref texturePropertyItem.value, allowEdit);
 							}
 
 							break;
@@ -890,7 +1123,7 @@ namespace Pico
 							    (lodLevel < AvatarLodLevel.Lod2 || _MaterialConfig.isLod2NeedBumpMap))
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value);
+									ref texturePropertyItem.value, allowEdit);
 							}
 
 							break;
@@ -898,7 +1131,7 @@ namespace Pico
 							if (_MaterialConfig.need_EmissionMap)
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value);
+									ref texturePropertyItem.value, allowEdit);
 								matPV_EmissionMap = texturePropertyItem.value;
 							}
 
@@ -907,7 +1140,7 @@ namespace Pico
 							if (_MaterialConfig.need_DetailMask)
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value);
+									ref texturePropertyItem.value, allowEdit);
 							}
 
 							break;
@@ -915,7 +1148,7 @@ namespace Pico
 							if (_MaterialConfig.need_DetailAlbedoMap)
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value);
+									ref texturePropertyItem.value, allowEdit);
 							}
 
 							break;
@@ -923,7 +1156,7 @@ namespace Pico
 							if (_MaterialConfig.need_ColorRegionMap)
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value);
+									ref texturePropertyItem.value, allowEdit);
 							}
 
 							break;
@@ -931,7 +1164,7 @@ namespace Pico
 							if (_MaterialConfig.need_SecondMap)
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value);
+									ref texturePropertyItem.value, allowEdit);
 							}
 
 							break;
@@ -939,7 +1172,7 @@ namespace Pico
 							if (_MaterialConfig.need_SecondMap && _MaterialConfig.need_BumpMap)
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value);
+									ref texturePropertyItem.value, allowEdit);
 							}
 
 							break;
@@ -948,7 +1181,7 @@ namespace Pico
 							                                       _MaterialConfig.need_SpecGlossMap))
 							{
 								texturePropertyItem.has_value = LoadTexture(nativeHandle, texturePropertyItem.id,
-									ref texturePropertyItem.value);
+									ref texturePropertyItem.value, allowEdit);
 							}
 
 							break;
@@ -1006,7 +1239,7 @@ namespace Pico
 				}
 
 				int materialCount = 0;
-				pav_LodMergedAvatarRenderMaterial_getMergedCount(nativeHandle, ref materialCount);
+				pav_AvatarMergedRenderMaterial_getMergedCount(nativeHandle, ref materialCount);
 				return materialCount;
 			}
 
@@ -1018,7 +1251,7 @@ namespace Pico
 				}
 
 				return NativeResult.Success ==
-				       pav_LodMergedAvatarRenderMaterial_setFloat(nativeHandle, materialIndex, propertyID, ref val);
+				       pav_AvatarMergedRenderMaterial_setFloat(nativeHandle, materialIndex, propertyID, ref val);
 			}
 
 			internal bool SetMergedColor(int materialIndex, uint propertyID, Color val)
@@ -1033,7 +1266,7 @@ namespace Pico
 				// color property apply to shader need convert from srgb to linear
 				val = val.linear;
 				return NativeResult.Success ==
-				       pav_LodMergedAvatarRenderMaterial_setVector4(nativeHandle, materialIndex, propertyID, ref val);
+				       pav_AvatarMergedRenderMaterial_setVector4(nativeHandle, materialIndex, propertyID, ref val);
 			}
 
 			internal bool GetMergedFloat(int materialIndex, uint propertyID, ref float val)
@@ -1043,8 +1276,9 @@ namespace Pico
 					return false;
 				}
 
+				val = 0;
 				return NativeResult.Success ==
-				       pav_LodMergedAvatarRenderMaterial_getFloat(nativeHandle, materialIndex, propertyID, ref val);
+				       pav_AvatarMergedRenderMaterial_getFloat(nativeHandle, materialIndex, propertyID, ref val);
 			}
 
 			internal bool GetMergedColor(int materialIndex, uint propertyID, ref Color val, bool toGamma)
@@ -1058,7 +1292,7 @@ namespace Pico
 				// if current color space is linear
 				// color property apply to shader need convert from srgb to linear
 				if (NativeResult.Success ==
-				    pav_LodMergedAvatarRenderMaterial_getVector4(nativeHandle, materialIndex, propertyID, ref val))
+				    pav_AvatarMergedRenderMaterial_getVector4(nativeHandle, materialIndex, propertyID, ref val))
 				{
 					if (toGamma)
 					{
@@ -1081,9 +1315,12 @@ namespace Pico
             //Derived class can override the method to release resources when the object will be destroyed.
             protected override void OnDestroy()
 			{
-				for (int i = 0; i < avatarRenderMaterialDef.texturePropertyCount; ++i)
+				if (mat_TexturePropertyItems != null)
 				{
-					ReferencedObject.ReleaseField(ref mat_TexturePropertyItems[i].value);
+                    foreach (MaterialTexturePropertyItem texturePropertyItem in mat_TexturePropertyItems)
+                    {
+                        ReferencedObject.ReleaseField(ref texturePropertyItem.value);
+                    }
 				}
 
 				matPV_BumpMap = null;
@@ -1109,7 +1346,7 @@ namespace Pico
             //Load texture field.
             //@param isLinear whether texture is linear or srgb.
             //@return false if can not load the property.
-            private bool LoadTexture(System.IntPtr renderMaterialHandle, uint propertyID, ref AvatarTexture avatarTex,
+            private bool LoadTexture(System.IntPtr renderMaterialHandle, uint propertyID, ref AvatarTexture avatarTex, bool allowEdit,
 				bool isLinear = true)
 			{
 				//if(AvatarEnv.NeedLog(DebugLogMask.AssetTrivial))
@@ -1119,10 +1356,12 @@ namespace Pico
 				//
 				var ti = new TextureInfo();
 				ti.version = 0;
+				// Used as md5 flag
+				ti.reserveByte2 = 1;
 				if (pav_AvatarRenderMaterial_GetTexture(renderMaterialHandle, propertyID, ref ti) ==
 				    NativeResult.Success)
 				{
-					avatarTex = AvatarTexture.CreateAndRefTexture(ref ti, isLinear);
+					avatarTex = AvatarTexture.CreateAndRefTexture(ref ti, isLinear, allowEdit);
 					return true;
 				}
 
@@ -1183,6 +1422,8 @@ namespace Pico
 
 			// application configurated material configuration.
 			private static PicoMaterialConfiguration _MaterialConfig = null;
+
+			protected static int s_ColorShift = Shader.PropertyToID("_ColorShift");
 
 			#endregion
 
@@ -1379,7 +1620,331 @@ namespace Pico
 			private static extern NativeResult pav_LodMergedAvatarRenderMaterial_getVector4(System.IntPtr nativeHandle,
 				int materialIndex, uint propertyID, ref Color val);
 
+			[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+			private static extern NativeResult pav_AvatarMergedRenderMaterial_getMergedCount(System.IntPtr nativeHandle, 
+				ref int materialCount);
+
+			[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+			private static extern NativeResult pav_AvatarMergedRenderMaterial_setFloat(System.IntPtr nativeHandle,
+				int materialIndex, uint propertyID, ref float val);
+
+			[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+			private static extern NativeResult pav_AvatarMergedRenderMaterial_setVector4(System.IntPtr nativeHandle,
+				int materialIndex, uint propertyID, ref Color val);
+
+			[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+			private static extern NativeResult pav_AvatarMergedRenderMaterial_getFloat(System.IntPtr nativeHandle,
+				int materialIndex, uint propertyID, ref float val);
+
+			[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+			private static extern NativeResult pav_AvatarMergedRenderMaterial_getVector4(System.IntPtr nativeHandle,
+				int materialIndex, uint propertyID, ref Color val);
+
 			#endregion
 		}
+
+		public class PicoAvatarMergedRenderMaterial : PicoAvatarRenderMaterial
+        {
+			private GraphicsBuffer _mergedMtlBuffer;
+			private int _bakeTaskFinished = 0;
+			private int _bakeTaskCount = 0;
+			private List<(BatchingGPUTask, PicoPrimitiveRenderMesh)> _bakeTasks = new List<(BatchingGPUTask, PicoPrimitiveRenderMesh)>();
+
+            private bool LoadTextures(AvatarLod lod)
+			{
+                if (!LoadTexturesFromNativeMaterial(lod.lodLevel, false))
+                {
+                    return false;
+                }
+
+				return true;
+			}
+
+			private void UpdateUnityMaterialWithAvatarRenderMaterial(AvatarLod lod, bool meshHasTangent, Material unityMtl)
+			{
+				UpdateMaterial(unityMtl);
+
+				// whether disable shadow casting.
+				if (PicoAvatarApp.instance.renderSettings.forceDisableReceiveShadow)
+				{
+					unityMtl.DisableKeyword("_MAIN_LIGHT_SHADOWS");
+					unityMtl.DisableKeyword("_MAIN_LIGHT_SHADOWS_CASCADE");
+					unityMtl.DisableKeyword("SHADOWS_SHADOWMASK");
+					//
+					unityMtl.EnableKeyword("_RECEIVE_SHADOWS_OFF");
+					unityMtl.SetFloat("_ReceiveShadows", 0.0f);
+				}
+
+				//
+				if (lod.owner.owner.avatarEffectKind != AvatarEffectKind.None)
+				{
+					if (lod.owner.owner.avatarEffectKind == AvatarEffectKind.SimpleOutline)
+					{
+						unityMtl.EnableKeyword("PAV_AVATAR_LOD_OUTLINE");
+						//
+						{
+							unityMtl.SetFloat("_Surface", (float)PicoAvatarRenderMaterial.SurfaceType.Opaque);
+							unityMtl.SetFloat("_ColorMask", (float)0.0);
+						}
+					}
+				}
+
+				// whether need tangent.
+				bool materialNeedTangent = has_BumpMap;
+				if (!unityMtl.HasProperty(PicoAvatarApp.instance.renderSettings.materialConfiguration.unityID_BumpMap))
+				{
+					materialNeedTangent = false;
+				}
+
+				if (lod.lodLevel >= AvatarLodLevel.Lod2)
+				{
+					unityMtl.SetFloat("_BaseColorAmplify", 0.8f);
+				}
+#if DEBUG
+				if (false)
+				{
+					var keywords = unityMtl.shaderKeywords;
+					var sb = new System.Text.StringBuilder();
+					sb.Append("material ");
+					sb.Append(unityMtl.shader.name);
+					sb.Append(" keywords:");
+					foreach (var x in keywords)
+					{
+						sb.Append(x);
+						sb.Append("|");
+					}
+
+					AvatarEnv.Log(DebugLogMask.GeneralInfo, sb.ToString());
+				}
+#endif
+			}
+
+			private Material CreateUnityMaterialFromAvatarRenderMaterial(AvatarLod lod, bool meshHasTangent)
+			{
+                if (!LoadTextures(lod))
+                    return null;
+
+                Material unityMtl = GetRuntimeMaterial(lod.lodLevel);
+                if (unityMtl != null)
+                {
+                    {
+                        unityMtl.SetFloat(s_ColorShift, 0.0f);
+                        unityMtl.DisableKeyword("_COLOR_SHIFT");
+                    }
+                    unityMtl.EnableKeyword("PAV_COLOR_REGION_BAKED");
+					unityMtl.EnableKeyword("_ENABLE_STATIC_MESH_BATCHING");
+
+
+					uint strideCount = 0, mergedCount = 0, mergedTextureSize = 0;
+					pav_AvatarMergedRenderMaterial_GetMaterialInfo(nativeHandle, ref strideCount, ref mergedCount, ref mergedTextureSize);
+					// UnityEngine.Debug.Log(string.Format("pav: CreateUnityMaterial Merged primitive: {0}, {1}", mergedCount, strideCount));
+
+					var bufferData = new NativeArray<float>((int)(strideCount * mergedCount), Allocator.Temp);
+					System.IntPtr bufferDataPointer;
+					unsafe
+					{
+						bufferDataPointer = (System.IntPtr)bufferData.GetUnsafePtr();
+					}
+					pav_AvatarMergedRenderMaterial_GetMaterialInfoData(nativeHandle, bufferDataPointer);
+                    _mergedMtlBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)mergedCount, (int)(strideCount * sizeof(float)));
+					_mergedMtlBuffer.SetData(bufferData);
+					unityMtl.SetBuffer("_MtlData", _mergedMtlBuffer);
+					bufferData.Dispose();
+                    UpdateUnityMaterialWithAvatarRenderMaterial(lod, meshHasTangent, unityMtl);
+                }
+                else
+                {
+                    AvatarEnv.Log(DebugLogMask.GeneralError, "Failed to get runtime material.");
+                    return null;
+                }
+				return unityMtl;
+			}
+
+			internal void TryUpdateMergedMaterialInfo(AvatarLod lod)
+			{
+				bool isNeedUpdate = false;
+				if (pav_AvatarMergedRenderMaterial_IsMaterialInfoTextureDirty(nativeHandle, ref isNeedUpdate) != NativeResult.Success)
+					return;
+				if (isNeedUpdate && _mergedMtlBuffer != null)
+				{
+					uint strideCount = 0, mergedCount = 0, mergedTextureSize = 0;
+					pav_AvatarMergedRenderMaterial_GetMaterialInfo(nativeHandle, ref strideCount, ref mergedCount, ref mergedTextureSize);
+					// UnityEngine.Debug.Log(string.Format("pav: CreateUnityMaterial Merged primitive: {0}, {1}", mergedCount, strideCount));
+
+                    var bufferData = new NativeArray<float>((int)(mergedCount * strideCount), Allocator.Temp);
+                    System.IntPtr bufferDataPointer;
+                    unsafe
+                    {
+                        bufferDataPointer = (System.IntPtr)bufferData.GetUnsafePtr();
+                    }
+                    pav_AvatarMergedRenderMaterial_GetMaterialInfoData(nativeHandle, bufferDataPointer);
+                    _mergedMtlBuffer.SetData(bufferData);
+					bufferData.Dispose();
+                }
+			}
+
+			public void FillRuntimeMaterial(AvatarLod lod, Material material)
+			{
+                material.EnableKeyword("_ENABLE_STATIC_MESH_BATCHING");
+                material.SetBuffer("_MtlData", _mergedMtlBuffer);
+				bool meshHasTangent = lod.mergedRenderMesh.skinnedMeshRenderer.sharedMesh.tangents.Length > 0;
+                UpdateUnityMaterialWithAvatarRenderMaterial(lod, meshHasTangent, material);
+            }
+
+            internal PicoAvatarMergedRenderMaterial(bool merged, AvatarLod avatarLod) : base(merged, avatarLod)
+			{
+
+			}
+
+            protected override void OnDestroy()
+            {
+				_mergedMtlBuffer.Release();
+				ClearBakeTasks();
+                // Added ref count of nativeHandle when calling pav_AvatarLod_GetMergedRenderMaterial is released in base class
+                base.OnDestroy();
+            }
+
+            public Material Build(System.IntPtr mtlNativeHandle, AvatarLod lod, bool hasTangent)
+			{
+				if (!LoadPropertiesFromNativeMaterial(mtlNativeHandle, lod.lodLevel, false))
+					return null;
+
+				foreach (var item in mat_TexturePropertyItems)
+				{
+					if (item.unityName == "_ColorRegionMap" && item.value != null && item.value.runtimeTexture != null)
+					{
+						ReferencedObject.ReleaseField(ref item.value);
+						item.has_value = false;
+						break;
+					}
+				}
+
+				return CreateUnityMaterialFromAvatarRenderMaterial(lod, hasTangent);
+			}
+
+			internal void ConditionalDispatchGPUTasks(AvatarLod lod, Dictionary<uint, AvatarPrimitive> primitives, System.IntPtr nativeMergedMtl)
+			{
+				ClearBakeTasks();
+				if (!lod.owner.owner.capabilities.allowEdit)
+				{
+					SetNativeHandle(nativeMergedMtl, false);
+					_bakeTaskFinished = 0;
+					var materialConfig = PicoAvatarApp.instance.renderSettings.materialConfiguration;
+					foreach (var primitive in primitives.Values)
+					{
+						if (primitive != null && primitive.isMergedToAvatarLod)
+						{
+							var renderMtls = primitive.GetRenderMaterialHandles();
+							if (renderMtls.Length == 0)
+								continue;
+							var tempMesh = new PicoPrimitiveRenderMesh();
+							tempMesh.AttachPrimitive(primitive);
+							if (tempMesh.BuildOfficialMaterialsFromNative(renderMtls, lod.lodLevel, false, false))
+							{
+								var runtimeMtls = tempMesh.GetOfficialRuntimeMaterial(tempMesh.officialRenderMaterials);
+								for (int n = 0; n < runtimeMtls.Length; ++n)
+								{
+									var officialRenderMaterial = tempMesh.officialRenderMaterials[n];
+									var material = runtimeMtls[n];
+									if (officialRenderMaterial.mat_shaderColorRegionBaked)
+										continue;
+
+									// Create gpu task
+									var baseMap = material.GetTexture("_BaseMap");
+									if (baseMap == null)
+										continue;
+									if (baseMap.dimension != TextureDimension.Tex2D)
+										continue;
+									_bakeTasks.Add((new BatchingGPUTask(
+										baseMap,
+                                        material.GetTexture("_ColorRegionMap"),
+                                        material.GetVector("_ColorRegion1"),
+                                        material.GetVector("_ColorRegion2"),
+                                        material.GetVector("_ColorRegion3"),
+                                        material.GetVector("_ColorRegion4"),
+										material.GetFloat("_UsingAlbedoHue"),
+										materialConfig.astcEncodeShader,
+										materialConfig.blendTextureShader,
+										this,
+										officialRenderMaterial.nativeHandle), tempMesh));
+									// Increase total task count
+									++_bakeTaskCount;
+								}
+							}
+						}
+					}
+				}
+
+				// Dispatch all tasks if any
+				if (_bakeTaskCount > 0)
+				{
+                    foreach (var task in _bakeTasks)
+					{
+                        task.Item1.Execute();
+					}
+				}
+			}
+
+			internal void BakeTaskFinished()
+			{
+				_bakeTaskFinished++;
+			}
+
+			internal bool CheckAllBaskTasksFinished()
+			{
+				return _bakeTaskFinished == _bakeTaskCount;
+			}
+
+			private void ClearBakeTasks()
+			{
+				if (_bakeTasks.Count > 0)
+				{
+                    foreach (var task in _bakeTasks)
+                    {
+                        task.Item1.Dispose();
+                        task.Item2.Destroy();
+						Component.Destroy(task.Item2);
+                    }
+                    _bakeTaskFinished = 0;
+                    _bakeTaskCount = 0;
+                    _bakeTasks.Clear();
+				}
+			}
+
+			internal void OnGpuTaskComplete(bool succeed, System.IntPtr nativeMtlHandle, Texture2D baseMap)
+			{
+				if (succeed)
+				{
+					unsafe
+					{
+						// Write buffer back to C++ texture
+						var buffer = baseMap.GetRawTextureData<byte>();
+						pav_AvatarMergedRenderMaterial_UpdateBakedTextureData(nativeMtlHandle, (System.IntPtr)buffer.GetUnsafeReadOnlyPtr<byte>(), (uint)buffer.Length, baseMap.width, baseMap.height, baseMap.mipmapCount);
+					}
+				}
+
+				BakeTaskFinished();
+            }
+
+			internal bool ConditionalContinueMerging()
+			{
+				if (CheckAllBaskTasksFinished())
+				{
+					ClearBakeTasks();
+					return true;
+				}
+				else { return false; }
+			}
+
+			const string PavDLLName = DllLoaderHelper.PavDLLName;
+            [DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+			private static extern void pav_AvatarMergedRenderMaterial_GetMaterialInfo(System.IntPtr nativeHandle, ref uint stride, ref uint count, ref uint mergedTextureSize);
+            [DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+			private static extern NativeResult pav_AvatarMergedRenderMaterial_GetMaterialInfoData(System.IntPtr nativeHandle, System.IntPtr val);
+            [DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+			private static extern NativeResult pav_AvatarMergedRenderMaterial_IsMaterialInfoTextureDirty(System.IntPtr nativeHandle, ref bool val);
+            [DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+			private static extern void pav_AvatarMergedRenderMaterial_UpdateBakedTextureData(System.IntPtr nativeHandle, System.IntPtr buffer, uint size, int width, int height, int mips);
+        }
 	}
 }

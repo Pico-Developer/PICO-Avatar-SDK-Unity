@@ -17,6 +17,9 @@
 		{
             Name "Sobel Filter"
             HLSLPROGRAM
+
+            float _MipBias;
+            float _BaseColorAmplify;
             #include "../Universal/ShaderLibrary/SurfaceInput.hlsl"
             #include "../Core/ShaderLibrary/Color.hlsl"
             

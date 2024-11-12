@@ -43,6 +43,10 @@
 	public enum AppModeType
 	{
 		/// <summary>
+		/// Unknown
+		/// </summary>
+		Unknown = 0,
+		/// <summary>
 		/// Public Mode
 		/// </summary>
 		Public = 1,

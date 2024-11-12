@@ -59,6 +59,9 @@ Shader "PAV/URP/LitAvatarBunch"
         _LaserColorRamp("Laser ColorRamp", 2D) = "white" {}
 
         _MipBias("_MipBias", Float) = 0
+        
+        _SpecularAAScreenSpaceVariance("Specular AA Screen Space Variance", Range(0,1)) = 0.1
+        _SpecularAAThreshold("Specular AA Threshold", Range(0,1)) = 0.2
 
         // SRP batching compatibility for Clear Coat (Not used in Lit)
         [HideInInspector] _ClearCoatMask("_ClearCoatMask", Float) = 0.0

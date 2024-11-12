@@ -3,7 +3,7 @@
 
 #include "../../PavConfig.hlsl"
 #include "../ShaderLibrary/Core.hlsl"
-#include "../ShaderLibrary/SurfaceInput.hlsl"
+
 
 /**
 _PARALLAXMAP  TEXTURE2D(_ParallaxMap);        SAMPLER(sampler_ParallaxMap);
@@ -31,6 +31,19 @@ CBUFFER_START(UnityPerMaterial)
     half _ShaderType;
     float4 _BaseMap_ST;
     half _AdditiveGI;
+    half _SpecularAAScreenSpaceVariance;
+    half _SpecularAAThreshold;
+    float  _BaseColorAmplify;
+    float4 _CustomVec_0;
+    float4 _CustomVec_1;
+    float4 _CustomVec_2;
+    float4 _CustomVec_3;
+    float4 _CustomVec_4;
+    float4 _CustomVec_5;
+    float4 _CustomVec_6;
+    float4 _CustomVec_7;
+    float4 _CustomVec_8;
+    float  _MipBias;
 CBUFFER_END
 #endif
 
@@ -45,6 +58,19 @@ CBUFFER_END
         UNITY_DOTS_INSTANCED_PROP(float , _OcclusionStrength)
         UNITY_DOTS_INSTANCED_PROP(float4, _BaseMap_ST)
         UNITY_DOTS_INSTANCED_PROP(float , _AdditiveGI)
+        UNITY_DOTS_INSTANCED_PROP(float, _SpecularAAScreenSpaceVariance)
+        UNITY_DOTS_INSTANCED_PROP(float, _SpecularAAThreshold)
+        UNITY_DOTS_INSTANCED_PROP(float, _BaseColorAmplify)
+        UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_0)
+        UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_1)
+        UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_2)
+        UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_3)
+        UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_4)
+        UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_5)
+        UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_6)
+        UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_7)
+        UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_8)
+        UNITY_DOTS_INSTANCED_PROP(float, _MipBias)
     UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
 
     #define _BaseColor          UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4 , Metadata__BaseColor)
@@ -56,7 +82,19 @@ CBUFFER_END
     #define _OcclusionStrength  UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float  , Metadata__OcclusionStrength)
     #define _BaseMap_ST         UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4 , Metadata__BaseMap_ST)
     #define _AdditiveGI         UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float  , Metadata__AdditiveGI)
-
+    #define _SpecularAAScreenSpaceVariance         UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float  , Metadata__SpecularAAScreenSpaceVariance)
+    #define _SpecularAAThreshold         UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float  , Metadata__SpecularAAThreshold)
+    #define _BaseColorAmplify UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float, Metadata__BaseColorAmplify)
+    #define _CustomVec_0 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_0)
+    #define _CustomVec_1 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_1)
+    #define _CustomVec_2 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_2)
+    #define _CustomVec_3 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_3)
+    #define _CustomVec_4 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_4)
+    #define _CustomVec_5 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_5)
+    #define _CustomVec_6 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_6)
+    #define _CustomVec_7 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_7)
+    #define _CustomVec_8 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_8)
+    #define _MipBias UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float, Metadata__MipBias)
 #elif defined(UNITY_INSTANCING_ENABLED)
     // for simple avatar, remove not used parts
     UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
@@ -73,6 +111,22 @@ CBUFFER_END
         //UNITY_DEFINE_INSTANCED_PROP(float, _Surface)
         //UNITY_DEFINE_INSTANCED_PROP(float, _ShaderType)
         UNITY_DEFINE_INSTANCED_PROP(float, _AdditiveGI)
+
+        UNITY_DEFINE_INSTANCED_PROP(float, _SpecularAAScreenSpaceVariance)
+        UNITY_DEFINE_INSTANCED_PROP(float, _SpecularAAThreshold)
+
+    UNITY_DEFINE_INSTANCED_PROP(float  ,_BaseColorAmplify)
+    UNITY_DEFINE_INSTANCED_PROP(float4 ,_CustomVec_0)
+    UNITY_DEFINE_INSTANCED_PROP(float4 ,_CustomVec_1)
+    UNITY_DEFINE_INSTANCED_PROP(float4 ,_CustomVec_2)
+    UNITY_DEFINE_INSTANCED_PROP(float4 ,_CustomVec_3)
+    UNITY_DEFINE_INSTANCED_PROP(float4 ,_CustomVec_4)
+    UNITY_DEFINE_INSTANCED_PROP(float4 ,_CustomVec_5)
+    UNITY_DEFINE_INSTANCED_PROP(float4 ,_CustomVec_6)
+    UNITY_DEFINE_INSTANCED_PROP(float4 ,_CustomVec_7)
+    UNITY_DEFINE_INSTANCED_PROP(float4 ,_CustomVec_8)
+    UNITY_DEFINE_INSTANCED_PROP(float  ,_MipBias)
+
     UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
     #define _BaseColor          UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial , _BaseColor)
@@ -88,7 +142,25 @@ CBUFFER_END
     #define _UsingAlbedoHue     0
     #define _ShaderType         0
     #define _AdditiveGI         UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial  , _AdditiveGI)
+    #define _SpecularAAScreenSpaceVariance         UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial  , _SpecularAAScreenSpaceVariance)
+    #define _SpecularAAThreshold         UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial  , _SpecularAAThreshold)
+    
+    #define  _BaseColorAmplify    UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _BaseColorAmplify)
+    #define  _CustomVec_0    UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _CustomVec_0)
+    #define  _CustomVec_1    UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _CustomVec_1)
+    #define  _CustomVec_2    UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _CustomVec_2)
+    #define  _CustomVec_3    UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _CustomVec_3)
+    #define  _CustomVec_4    UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _CustomVec_4)
+    #define  _CustomVec_5    UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _CustomVec_5)
+    #define  _CustomVec_6    UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _CustomVec_6)
+    #define  _CustomVec_7    UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _CustomVec_7)
+    #define  _CustomVec_8    UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _CustomVec_8)
+    #define  _MipBias    UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _MipBias)
+
+
 #endif
+
+#include "../ShaderLibrary/SurfaceInput.hlsl"
 
 #define PAV_SAMPLE_SPECULAR_SMOOTHNESS(uv, alpha, specColor) SampleSpecularSmoothness(uv, alpha, specColor)
 #define PAV_INIT_SIMPLE_SURFACE_DATA(uv, outSurfaceData) InitializeSimpleLitSurfaceData(uv, outSurfaceData)

@@ -259,7 +259,7 @@ namespace Pico
                 if (string.IsNullOrEmpty(_app.loginSettings.accessToken))
                 {
                     
-                    UnityWebRequest webRequest = UnityWebRequest.Get(NetEnvHelper.GetFullRequestUrl(NetEnvHelper.SampleTokenApi, ""));
+                    UnityWebRequest webRequest = UnityWebRequest.Get(NetEnvHelper.GetFullRequestUrl(NetEnvHelper.SampleTokenApi));
                     webRequest.timeout = 10; // 设置超时时间为10秒
                     webRequest.SetRequestHeader("Content-Type", "application/json"); 
                     yield return webRequest.SendWebRequest();

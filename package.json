@@ -1,7 +1,7 @@
 {
   "name": "org.byted.avatar.sdk",
   "displayName": "PICO Avatar",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "unity": "2020.3",
   "description": "Provides a range of features, components, and scripts covering rendering, interaction, sensing, platform services, and more.",
   "keywords": [

@@ -8,6 +8,7 @@ Shader "PAV/URP/Unlit"
         _OutlineColor("OutlineColor", Color) = (0,0,0,1)
         _Cutoff("AlphaCutout", Range(0.0, 1.0)) = 0.5
         _BaseColorAmplify("BaseColorAmplify", Float) = 1.0
+        _MipBias("_MipBias", Float) = 0
 
             // BlendMode
             [HideInInspector] _Surface("__surface", Float) = 0.0
@@ -181,8 +182,8 @@ Shader "PAV/URP/Unlit"
                     #pragma fragment DepthOnlyFragment
 
                     // 
-                    #pragma multi_compile _ PAV_VERTEX_FROM_BUFFER
-                    #pragma multi_compile _ PAV_MERGED_TEXTURE
+                    // #pragma multi_compile _ PAV_VERTEX_FROM_BUFFER
+                    // #pragma multi_compile _ PAV_MERGED_TEXTURE
 
                     // -------------------------------------
                     // Material Keywords
@@ -192,6 +193,8 @@ Shader "PAV/URP/Unlit"
                     // GPU Instancing
                     //#pragma multi_compile_instancing
                     //#pragma multi_compile _ DOTS_INSTANCING_ON
+
+                    #pragma multi_compile _ _ENABLE_STATIC_MESH_BATCHING
 
                     #include "./Universal/Shaders/UnlitInput.hlsl"
                     #include "./Universal/Shaders/PavDepthOnlyPass.hlsl"

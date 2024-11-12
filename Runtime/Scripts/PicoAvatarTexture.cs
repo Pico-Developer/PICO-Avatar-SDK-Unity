@@ -3,6 +3,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using System.Runtime.InteropServices;
+using System.Linq;
 
 namespace Pico
 {
@@ -327,27 +328,40 @@ namespace Pico
 			/// Constructor
 			/// </summary>
 			/// <param name="texCacheKey">Cache key</param>
-			public AvatarTexture(long texCacheKey)
+			public AvatarTexture(string texCacheKey)
 			{
 				_textureCacheKey = texCacheKey;
+				if (PicoAvatarStats.instance != null)
+				{
+                    PicoAvatarStats.instance.IncreaseInstanceCount(PicoAvatarStats.InstanceType.AvatarTexture);
+				}
 			}
 
 			/// <summary>
 			/// Create texture with texture information.
-			/// @note
 			/// Retain will be invoked for retained object.
 			/// </summary>
 			/// <param name="textureInfo">Configuration of texture</param>
 			/// <param name="isLinear">Is in linear space</param>
+			///  <param name="allowEdit">Is allow Edit</param>
 			/// <returns>AvatarTexture created</returns>
-			public static AvatarTexture CreateAndRefTexture(ref TextureInfo textureInfo, bool isLinear)
+			public static AvatarTexture CreateAndRefTexture(ref TextureInfo textureInfo, bool isLinear, bool allowEdit)
 			{
 				if (textureInfo.texObject == System.IntPtr.Zero)
 				{
 					return null;
 				}
 
-				long textureCacheKey = (textureInfo.texObject.ToInt64() << 16) + textureInfo.instanceKey;
+				// long textureCacheKey = (textureInfo.texObject.ToInt64() << 16) + textureInfo.instanceKey;
+				string textureCacheKey;
+				var notZeroIndex = System.Array.FindIndex(textureInfo.md5, (byte d) =>
+				{
+					return d != 0;
+				});
+				if (allowEdit || notZeroIndex < 0)
+					textureCacheKey = System.String.Format("raw+{0}", (textureInfo.texObject.ToInt64() << 16) + textureInfo.instanceKey);
+				else
+                    textureCacheKey = "md5+" + System.String.Join("", textureInfo.md5.Select(v=>v.ToString("X2")).ToArray());
 				AvatarTexture avatarTex;
 				if (_textures.TryGetValue(textureCacheKey, out avatarTex))
 				{
@@ -373,6 +387,209 @@ namespace Pico
 				return avatarTex;
 			}
 
+			public static bool CreateAndRefTexture(string cacheKey, Texture tex, uint texByteSize, out AvatarTexture avatarTex)
+			{
+				if (_textures.TryGetValue(cacheKey, out avatarTex))
+					return true;
+				else
+				{
+                    avatarTex = new AvatarTexture(cacheKey);
+					avatarTex._texture = tex;
+					avatarTex._dataByteSize = texByteSize;
+                    _textures.Add(cacheKey, avatarTex);
+                    avatarTex.Retain();
+					return false;
+				}
+			}
+
+			public bool Update(ref TextureInfo textureInfo, bool isLinear)
+			{
+				_textureInfo = textureInfo;
+
+                if (textureInfo.version > 0)
+				{
+					isLinear = textureInfo.sRGB == 0 ? true : false;
+				}
+				// check size.
+				if (textureInfo.width == 0 || textureInfo.height == 0)
+				{
+					return false;
+				}
+
+				if (!Utility.EnableRenderObject)
+				{
+					return true;
+				}
+
+                try
+				{
+					var format = Pico.Avatar.Utility.GetUnityTextureFormat((AvatarPixelFormat)textureInfo.format);
+					if (textureInfo.imageType == (ushort)ImageType.TEXTURE_2D)
+					{
+						//
+						//if (AvatarEnv.NeedLog(DebugLogMask.AssetTrivial))
+						//{
+						//    AvatarEnv.Log(DebugLogMask.AssetTrivial, "start buildTexture");
+						//}
+
+						if (_mergedTexture != null) // Type mismatching
+						{
+							return false;
+						}
+
+						var tex = (Texture2D)_texture;
+						if (tex == null)
+						{
+							if (AvatarEnv.NeedLog(DebugLogMask.GeneralWarn))
+							{
+								AvatarEnv.Log(DebugLogMask.GeneralWarn, "new Texture2D error. format maybe wrong!");
+							}
+
+							return false;
+						}
+
+						var texData = tex.GetRawTextureData<byte>();
+
+						var data = new TextureSliceData();
+						data.version = 0;
+						data.width = textureInfo.width;
+						data.height = textureInfo.height;
+						data.format = textureInfo.format;
+						data.mips = textureInfo.mipsCount;
+						data.face = 0;
+						data.dataByteSize = (uint)texData.Length;
+						// cache data size.
+						_dataByteSize = (uint)texData.Length;
+
+						unsafe
+						{
+							data.data = (System.IntPtr)texData.GetUnsafePtr();
+						}
+
+						if (pav_AvatarTexture_GetSliceFaceData(textureInfo.texObject, ref data) != NativeResult.Success)
+						{
+							Object.DestroyImmediate(tex);
+							return false;
+						}
+						// upload texture data to gpu.
+#if UNITY_EDITOR
+						tex.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+#else
+                        tex.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+#endif
+
+						//if (AvatarEnv.NeedLog(DebugLogMask.AssetTrivial))
+						//{
+						//    AvatarEnv.Log(DebugLogMask.AssetTrivial, string.Format("end buildTexture. w:{0} h:{1} totalAlive:{2}", tex.width, tex.height, _textureCount));
+						//}
+					}
+					else if (textureInfo.imageType == (ushort)ImageType.TEXTURE_2D_ARRAY)
+					{
+						if (_texture != null)
+						{
+							return false;
+						}
+
+                        var tex2dArray = (Texture2DArray)_mergedTexture;
+						if (tex2dArray == null)
+						{
+							Debug.LogError("new Texture2DArray error. format maybe wrong!");
+							return false;
+						}
+
+						//
+						//if(AvatarEnv.NeedLog(DebugLogMask.AssetTrivial))
+						//{
+						//    AvatarEnv.Log(DebugLogMask.AssetTrivial, "start buildTextureArray");
+						//}
+
+						var texData = new NativeArray<byte>((int)(textureInfo.width * textureInfo.height * 4),
+							Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+						bool error = false;
+
+						var data = new TextureSliceData();
+						data.version = 0;
+						data.width = textureInfo.width;
+						data.height = textureInfo.height;
+						data.format = textureInfo.format;
+						data.face = 0;
+						// cache data size.
+						_dataByteSize = (uint)0;
+						//
+						for (int i = 0; i < textureInfo.mipsCount; ++i)
+						{
+							data.mips = (ushort)i;
+							for (int j = 0; j < textureInfo.slicesCount; ++j)
+							{
+								data.slice = (ushort)j;
+								unsafe
+								{
+									data.data = (System.IntPtr)texData.GetUnsafePtr();
+								}
+
+								if (pav_AvatarTexture_GetSliceFaceData(textureInfo.texObject, ref data) !=
+								    NativeResult.Success)
+								{
+									error = true;
+									break;
+								}
+
+								//
+								_dataByteSize += data.dataByteSize;
+								//
+								tex2dArray.SetPixelData(texData, i, j, 0);
+							}
+
+							if (error)
+							{
+								break;
+							}
+						}
+
+						texData.Dispose();
+
+						if (error)
+						{
+							Object.DestroyImmediate(tex2dArray);
+							return false;
+						}
+
+#if UNITY_EDITOR
+						tex2dArray.Apply(updateMipmaps: false, makeNoLongerReadable: false);
+#else
+                        tex2dArray.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+#endif
+
+						//
+						//if (AvatarEnv.NeedLog(DebugLogMask.AvatarLoad))
+						//{
+						//    AvatarEnv.Log(DebugLogMask.AvatarLoad, string.Format("end buildTextureArray w:{0} h:{1} d:{2} totalAlive:{3}", tex2dArray.width, tex2dArray.height, tex2dArray.depth, _textureCount));
+						//}
+					}
+				}
+				catch (System.Exception e)
+				{
+					if (AvatarEnv.NeedLog(DebugLogMask.AvatarLoad))
+					{
+						AvatarEnv.Log(DebugLogMask.AvatarLoad, e.Message);
+					}
+
+					return false;
+				}
+
+				{
+					var tex = _texture ? _texture : (_mergedTexture ? _mergedTexture : null);
+					if (tex)
+					{
+                        tex.wrapModeU = ConvertAvatarTextureWrapMode(textureInfo.wrapModeS);
+                        tex.wrapModeV = ConvertAvatarTextureWrapMode(textureInfo.wrapModeR);
+                        tex.filterMode = FilterMode.Bilinear;
+					}
+				}
+
+				return true;
+			}
+
 			#endregion
 
 
@@ -381,6 +598,10 @@ namespace Pico
 			// Derived class can override the method to release resources when the object will be destroyed.
 			protected override void OnDestroy()
 			{
+				if (PicoAvatarStats.instance != null)
+				{
+                    PicoAvatarStats.instance.DecreaseInstanceCount(PicoAvatarStats.InstanceType.AvatarTexture);
+				}
 				if (_texture)
 				{
 					_textureCount -= 1;
@@ -412,11 +633,12 @@ namespace Pico
 				}
 
 				// remove from cache.
-				if (_textureCacheKey != 0)
-				{
-					_textures.Remove(_textureCacheKey);
-					_textureCacheKey = 0;
-				}
+				//if (_textureCacheKey != 0)
+				//{
+				//	_textures.Remove(_textureCacheKey);
+				//	_textureCacheKey = 0;
+				//}
+				_textures.Remove(_textureCacheKey);
 
 				//
 				base.OnDestroy();
@@ -431,7 +653,7 @@ namespace Pico
 			private TextureInfo _textureInfo;
 
 			// key of texture in cache.
-			private long _textureCacheKey = 0;
+			private string _textureCacheKey;
 
 			// unity texturedsa
 			private Texture _texture;
@@ -440,7 +662,7 @@ namespace Pico
 			// data size
 			private uint _dataByteSize = 0;
 
-			private static Dictionary<long, AvatarTexture> _textures = new Dictionary<long, AvatarTexture>();
+			private static Dictionary<string, AvatarTexture> _textures = new Dictionary<string, AvatarTexture>();
 			private static int _textureCount = 0;
 
 			#endregion
@@ -478,7 +700,7 @@ namespace Pico
 						//}
 
 						var tex = new Texture2D((int)textureInfo.width, (int)textureInfo.height, format,
-							textureInfo.mipsCount > 1, isLinear);
+							textureInfo.mipsCount, isLinear);
 						if (tex == null)
 						{
 							if (AvatarEnv.NeedLog(DebugLogMask.GeneralWarn))
@@ -531,7 +753,7 @@ namespace Pico
 					else if (textureInfo.imageType == (ushort)ImageType.TEXTURE_2D_ARRAY)
 					{
 						var tex2dArray = new Texture2DArray((int)textureInfo.width, (int)textureInfo.height,
-							(int)textureInfo.slicesCount, format, textureInfo.mipsCount > 1, isLinear);
+							(int)textureInfo.slicesCount, format, textureInfo.mipsCount, isLinear);
 						if (tex2dArray == null)
 						{
 							Debug.LogError("new Texture2DArray error. format maybe wrong!");
@@ -624,9 +846,12 @@ namespace Pico
 
 				{
 					var tex = _texture ? _texture : (_mergedTexture ? _mergedTexture : null);
-					tex.wrapModeU = ConvertAvatarTextureWrapMode(textureInfo.wrapModeS);
-					tex.wrapModeV = ConvertAvatarTextureWrapMode(textureInfo.wrapModeR);
-					tex.filterMode = FilterMode.Bilinear;
+					if (tex)
+					{
+                        tex.wrapModeU = ConvertAvatarTextureWrapMode(textureInfo.wrapModeS);
+                        tex.wrapModeV = ConvertAvatarTextureWrapMode(textureInfo.wrapModeR);
+                        tex.filterMode = FilterMode.Bilinear;
+					}
 				}
 
 				return true;

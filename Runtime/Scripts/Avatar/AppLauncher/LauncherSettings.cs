@@ -11,6 +11,10 @@ namespace Pico.Avatar
 	public class AppSettings
 	{
 		/// <summary>
+		/// Whether enable static mesh batching
+		/// </summary>
+		public bool enableStaticMeshBatching = false;
+		/// <summary>
 		/// Whether do garbage collection automatically
 		/// </summary>
 		public bool autoGarbageCollection;
@@ -57,13 +61,22 @@ namespace Pico.Avatar
 		/// Standardize & reform >= 2.8.0
 		/// IKRefactor & AutoLod >= 2.8.1
 		/// MeshSocket & Studio >= 2.8.5
+		/// NewOSAvatar >= 2.9.0
+		/// GPU Batch & Avatar >= 2.9.1
 		/// </summary>
-		[NonSerialized] public const string avatarSdkVersion = "2.8.5";
+		[NonSerialized] public const string avatarSdkVersion = "2.9.1";
+
+		/// <summary>
+		/// the unity upload tool.
+		/// </summary>
+		[NonSerialized] public const string avatarUploaderVersion = "1.1.0";
 
 		/// <summary>
 		/// the unity plugin commit.
 		/// </summary>
 		[NonSerialized] public const string unityPluginCommit = "7c5b6bac";
+
+
 
 		/// <summary>
 		/// Version of under level avatar sdk. It should be get from native library.
@@ -78,7 +91,7 @@ namespace Pico.Avatar
 		/// <summary>
 		/// Version of minimum matrix version
 		/// </summary>
-		[NonSerialized] public string minMatrixVersion = "6.0.2";
+		[NonSerialized] public string minMatrixVersion = "6.2.0";
 	}
 
 	/// <summary>

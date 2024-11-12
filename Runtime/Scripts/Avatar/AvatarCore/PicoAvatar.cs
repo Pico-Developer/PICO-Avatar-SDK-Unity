@@ -205,7 +205,10 @@ namespace Pico
 			/// </summary>
 			public bool forceUpdateSkeleton = false;
 
-			internal bool forceUpdateSkeletonFromNative = false;
+			/// <summary>
+			/// Avatar lod dirty flag. Will be set to true when avatar change lod level.
+			/// </summary>
+			internal bool isAvatarLodDirty = false;
 
 			#endregion
 
@@ -484,7 +487,7 @@ namespace Pico
 			/// <summary>
 			/// Add animation set by its id
 			/// </summary>
-			/// <param name="animationSetId">animationSetId/param>
+			/// <param name="animationSetId">animationSetId</param>
 			public void AddAnimationSet(string animationSetId)
 			{
 				if (_rmiObject != null)
@@ -1018,7 +1021,7 @@ namespace Pico
                 }
 				_criticalJointsDirty = false;
 				//force update skeleton from native
-                forceUpdateSkeletonFromNative = true;
+                isAvatarLodDirty = true;
 
 
 				//
@@ -1188,7 +1191,7 @@ namespace Pico
 
 			internal bool CheckNeedUpdateSimulationDataThisFrame()
             {
-                return forceUpdateSkeletonFromNative || CheckNativeVisible();
+                return CheckNativeVisible() || isAvatarLodDirty;
             }
 
 			/// <summary>

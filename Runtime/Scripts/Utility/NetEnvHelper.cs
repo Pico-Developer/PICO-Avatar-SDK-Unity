@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Pico
 {
@@ -32,13 +31,13 @@ namespace Pico
 			/// </summary>
 			/// <param name="providerName"></param>
 			/// <returns></returns>
-			public static string GetHostServer(string providerName)
+			public static string GetHostServer()
 			{
 				if (PicoAvatarApp.instance == null)
 					return string.Empty;
-				var assetServerType = providerName.Equals("oidc-pico-global")
-					? AssetServerType.OverSea
-					: AssetServerType.China;
+				var assetServerType = PicoAvatarApp.instance.IsCnDevice()
+					? AssetServerType.China
+					: AssetServerType.OverSea;
 
 				assetServerType = PicoAvatarApp.instance.appSettings.serverType == ServerType.ProductionEnv
 					? assetServerType
@@ -50,9 +49,9 @@ namespace Pico
 				return string.IsNullOrEmpty(url) ? string.Empty : url;
 			}
 
-			public static string GetFullRequestUrl(string api, string providerName)
+			public static string GetFullRequestUrl(string api)
 			{
-				return GetHostServer(providerName) + api;
+				return GetHostServer() + api;
 			}
 		}
 	}

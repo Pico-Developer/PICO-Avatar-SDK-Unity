@@ -1,10 +1,17 @@
 //#define PAV_MATERIAL_DATA_TEXTURE
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Mathematics;
+// using UnityEditor.Graphs;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.XR;
 
 namespace Pico
 {
@@ -159,6 +166,16 @@ namespace Pico
 					_skinMeshRenderer = null;
 				}
 
+				if (_bakeColorRegionEntities != null)
+				{
+					foreach (var bcrEntity in _bakeColorRegionEntities)
+					{
+						bcrEntity.ReleaseManual();
+					}
+					_bakeColorRegionEntities.Clear();
+					_bakeColorRegionEntities = null;
+				}
+
 				// release render material.
 				DestroyAvatarRenderMaterials();
 
@@ -185,7 +202,7 @@ namespace Pico
 			}
 			
             //Update Unity render data from native simulation data.
-            //@remark Derived class SHOULD override the method to do actual update.
+            //Derived class SHOULD override the method to do actual update.
             internal virtual void UpdateSimulationRenderData()
 			{
 			}
@@ -215,8 +232,8 @@ namespace Pico
 
 				customRenderMaterials = null;
 			}
-
-			protected Material[] GetOfficialRuntimeMaterial(PicoAvatarRenderMaterial[] mats)
+			
+			internal Material[] GetOfficialRuntimeMaterial(PicoAvatarRenderMaterial[] mats)
 			{
 				var runtimeMaterials = new Material[mats.Length];
 				for (int i = 0; i < mats.Length; ++i)
@@ -459,13 +476,13 @@ namespace Pico
 			}
 
             //Build material from native AvatarRenderMaterial and apply to the renderer.
-            //@param renderMaterialHandles list of native AvatarRenderMaterial. Reference count has been added from invoker.
+            //renderMaterialHandles list of native AvatarRenderMaterial. Reference count has been added from invoker.
             internal bool BuildOfficialMaterialsFromNative(System.IntPtr[] renderMaterialHandles,
-				AvatarLodLevel lodLevel, bool merged)
+				AvatarLodLevel lodLevel, bool allowEdit, bool merged)
 			{
 				
 				// create material with native material data. pass lifetime management of renderMaterialHandles to AvatarRenderMaterials.
-				officialRenderMaterials = CreateRenderMaterials(renderMaterialHandles, lodLevel, merged);
+				officialRenderMaterials = CreateRenderMaterials(renderMaterialHandles, lodLevel, allowEdit, merged);
 				if (officialRenderMaterials == null)
 				{
 					Destroy();
@@ -478,7 +495,7 @@ namespace Pico
 						var renderMaterial = officialRenderMaterials[i];
 						if (renderMaterial != null)
 						{
-							if (!renderMaterial.LoadTexturesFromNativeMaterial(lodLevel))
+							if (!renderMaterial.LoadTexturesFromNativeMaterial(lodLevel, allowEdit))
 							{
 								Destroy();
 								return false;
@@ -556,16 +573,16 @@ namespace Pico
 			
 			//
 			protected bool _useCustomMaterial = false;
-			
+			protected List<BakeColorRegionEntity> _bakeColorRegionEntities = new List<BakeColorRegionEntity>();
 			#endregion
 
 
 			#region Protected Methods
-			
-            //Build mesh object.
-            //@param  renderMeshHandle native handle to AvatarRenderMesh. Reference count has been added.
-            //@param allowGpuDataCompressd whether allow compress gpu data.
-            protected bool CreateUnityRenderMesh(System.IntPtr renderMeshHandle, AvatarSkeleton avatarSkeleton_,
+
+			//Build mesh object.
+			//renderMeshHandle native handle to AvatarRenderMesh. Reference count has been added.
+			//allowGpuDataCompressd whether allow compress gpu data.
+			protected bool CreateUnityRenderMesh(System.IntPtr renderMeshHandle, AvatarSkeleton avatarSkeleton_,
 				AvatarLodLevel lodLevel_,
 				System.IntPtr owner, bool allowGpuDataCompressd,
 				AvatarShaderType mainShaderType = AvatarShaderType.Invalid,
@@ -730,7 +747,6 @@ namespace Pico
 			}
             
             //Invoked to update simulation buffer.
-            //@return 
             protected bool UpdateMorphAndSkinSimulationBuffer(System.IntPtr meshOwner,
 				RecordBodyAnimLevel level = RecordBodyAnimLevel.Count, bool expressionPlaybackEnabled = false)
 			{
@@ -840,9 +856,9 @@ namespace Pico
 			}
             
             //Sets render material. 
-            //@param renderMaterialHandles list of handle to native AvatarRenderMaterial. Reference count has been added from invoker.
+            //renderMaterialHandles list of handle to native AvatarRenderMaterial. Reference count has been added from invoker.
             protected PicoAvatarRenderMaterial[] CreateRenderMaterials(System.IntPtr[] renderMaterialHandles,
-				AvatarLodLevel lodLevel, bool merged)
+				AvatarLodLevel lodLevel, bool allowEdit, bool merged)
 			{
 				PicoAvatarRenderMaterial[] materials = new PicoAvatarRenderMaterial[renderMaterialHandles.Length];
 				bool success = true;
@@ -852,7 +868,7 @@ namespace Pico
 					materials[i].Retain();
 
 					// try to load render material.
-					if (!materials[i].LoadPropertiesFromNativeMaterial(renderMaterialHandles[i], lodLevel))
+					if (!materials[i].LoadPropertiesFromNativeMaterial(renderMaterialHandles[i], lodLevel, allowEdit))
 					{
 						success = false;
 					}
@@ -1007,13 +1023,65 @@ namespace Pico
 
 			#endregion
 
+			#region BakeColorRegion
+			void OfficialMaterialBakeColorRegionOnGPUAndAsyncReadback(Material mat)
+			{
+				var materailConfig = PicoAvatarApp.instance.renderSettings.materialConfiguration;
+				var bte = new BakeColorRegionEntity();
+				_bakeColorRegionEntities.Add(bte);
+				if (bte == null)
+				{
+					AvatarEnv.Log(DebugLogMask.GeneralError, "BakeColorRegionEntity is null.");
+					return;
+				}
+				if (!materailConfig)
+				{
+					AvatarEnv.Log(DebugLogMask.GeneralError, "PicoAvatarApp.instance.renderSettings.materialConfiguration is null.");
+					return;
+				}
+				bte.astcEncoderShader = materailConfig.astcEncodeShader;
+				bte.blendTexturesShader = materailConfig.blendTextureShader;
+				bte.material = mat;
+				bte.BaseMap = mat.GetTexture("_BaseMap");
+				bte.ColorRegion = mat.GetTexture("_ColorRegionMap");
+				bte.Region1 = mat.GetVector("_ColorRegion1");
+				bte.Region2 = mat.GetVector("_ColorRegion2");
+				bte.Region3 = mat.GetVector("_ColorRegion3");
+				bte.Region4 = mat.GetVector("_ColorRegion4");
+				bte.albedoHue = mat.GetFloat("_UsingAlbedoHue");
+				bte.Execute();
+			}
 
+
+			bool OfficialMergeMaterialsOnGPUAndAsyncReadback(Mesh mesh, Renderer render ,Material[] mats)
+			{
+				var materailConfig = PicoAvatarApp.instance.renderSettings.materialConfiguration;
+				var bte = new MergeMaterialAndBakeColorRegionEntity();
+				if (bte == null)
+				{
+					AvatarEnv.Log(DebugLogMask.GeneralError, "MergeMaterialAndBakeColorRegionEntity is null.");
+					return false;
+				}
+				if (!materailConfig)
+				{
+					AvatarEnv.Log(DebugLogMask.GeneralError, "PicoAvatarApp.instance.renderSettings.materialConfiguration is null.");
+					return false;
+				}
+				bte.astcEncoderShader = materailConfig.astcEncodeShader;
+				bte.blendTexturesShader = materailConfig.blendTextureShader;
+				bte.mergeTextureShader = materailConfig.mergeTextureShader;
+				bte.materials = mats;
+				bte.renderer = render;
+				bte.mesh = mesh;
+				return bte.Execute();
+			}
+			#endregion
 			#region Build Mesh/Material
-			
-            //Build renderer with native AvatarRenderMesh and AvatarRenderMaterial.
-            //@param renderMeshHandle handle to native AvatarRenderMesh. Reference count has been added from invoker.
-            //@param renderMaterialHandles handle to native AvatarRenderMaterial. Reference count has been added from invoker.
-            internal bool BuildFromNativeRenderMeshAndMaterial(System.IntPtr renderMeshHandle,
+
+			//Build renderer with native AvatarRenderMesh and AvatarRenderMaterial.
+			//renderMeshHandle handle to native AvatarRenderMesh. Reference count has been added from invoker.
+			//renderMaterialHandles handle to native AvatarRenderMaterial. Reference count has been added from invoker.
+			internal bool BuildFromNativeRenderMeshAndMaterial(System.IntPtr renderMeshHandle,
 				System.IntPtr[] renderMaterialHandles,
 				AvatarSkeleton avatarSkeleton_, bool allowGpuDataCompressd, bool cacheMorphChannelWeights = false,
 				bool depressSkin = false)
@@ -1028,42 +1096,42 @@ namespace Pico
 				{
 					return false;
 				}
-				
+
 
 				Material[] customMaterials = null;
 				Material[] officialMaterials = null;
-				
+
 				// get Custom Material info.
 				// get customRenderMaterials --> AvatarMaterial.
 				// get customMaterials --> Unity Runtime Material.
 				if (PicoAvatarApp.instance.renderSettings.useCustomMaterial)
 				{
-					if(BuildCustomMaterialsFromNative(renderMaterialHandles))
+					if (BuildCustomMaterialsFromNative(renderMaterialHandles))
 					{
 						customMaterials = GetCustomRuntimeMaterial(customRenderMaterials);
-						if (customMaterials != null) 
+						if (customMaterials != null)
 						{
 							this._useCustomMaterial = true;
 						}
 					}
 				}
-				
+
 				// build mesh with native mesh data for a lod level second.
 				// using _useCustomMaterial to flip uv.
 				{
 					if (!CreateUnityRenderMesh(renderMeshHandle, avatarSkeleton_, _Primitive.lodLevel,
-						    _Primitive.nativeHandle,
-						    allowGpuDataCompressd, _Primitive.mainShaderType, cacheMorphChannelWeights, depressSkin))
+							_Primitive.nativeHandle,
+							allowGpuDataCompressd, _Primitive.mainShaderType, cacheMorphChannelWeights, depressSkin))
 					{
 						return false;
 					}
 				}
-				
+
 				// get Official material info.
 				// get officialRenderMaterials --> AvatarMaterial.
 				// get officialMaterials --> Unity Runtime Material.
 				{
-					if (!BuildOfficialMaterialsFromNative(renderMaterialHandles, _Primitive.lodLevel, false))
+					if (!BuildOfficialMaterialsFromNative(renderMaterialHandles, _Primitive.lodLevel, _Primitive.owner.owner.owner.capabilities.allowEdit, false))
 					{
 						return false;
 					}
@@ -1073,6 +1141,18 @@ namespace Pico
 				// set official Material first.
 				if (officialMaterials != null)
 				{
+					if (!_Primitive.owner.owner.owner.capabilities.allowEdit)
+					{
+						for (int i = 0; i < officialRenderMaterials.Length; ++i)
+						{
+							var renderMaterial = officialRenderMaterials[i]; 
+							var runtimeMaterial = officialMaterials[i];
+							if (!renderMaterial.mat_shaderColorRegionBaked)
+							{
+								OfficialMaterialBakeColorRegionOnGPUAndAsyncReadback(runtimeMaterial);
+							}
+						}
+					}
 					if (skinMeshRenderer)
 					{
 						skinMeshRenderer.sharedMaterials = officialMaterials;
@@ -1083,37 +1163,36 @@ namespace Pico
 						meshRenderer.SetPropertyBlock(new MaterialPropertyBlock());
 					}
 				}
-				
-				// set CustomMaterial Second.
-				if (customMaterials != null)
-				{
-					if (skinMeshRenderer)
+
+					// set CustomMaterial Second.
+					if (customMaterials != null)
 					{
-						skinMeshRenderer.sharedMaterials = customMaterials;
+						if (skinMeshRenderer)
+						{
+							skinMeshRenderer.sharedMaterials = customMaterials;
+						}
+						else if (meshRenderer)
+						{
+							meshRenderer.sharedMaterials = customMaterials;
+							meshRenderer.SetPropertyBlock(new MaterialPropertyBlock());
+						}
 					}
-					else if (meshRenderer)
+
+					//
+					if (needUpdateSimulation && _Primitive.owner != null)
 					{
-						meshRenderer.sharedMaterials = customMaterials;
-						meshRenderer.SetPropertyBlock(new MaterialPropertyBlock());
+						_Primitive.owner.AddSimulationNeededAvatarPrimitive(_Primitive);
 					}
-				}
-				
-				//
-				if (needUpdateSimulation && _Primitive.owner != null)
-				{
-					_Primitive.owner.AddSimulationNeededAvatarPrimitive(_Primitive);
-				}
-				
-				return true;
+
+					return true;
 			}
 
 			#endregion
 
-
 			#region Update Simulation Data
-			
-            //Update morph and skin each frame.
-            internal override void UpdateSimulationRenderData()
+
+			//Update morph and skin each frame.
+			internal override void UpdateSimulationRenderData()
 			{
 				if (_Primitive != null && _Primitive.nativeHandle != System.IntPtr.Zero && needUpdateSimulation)
 				{
@@ -1132,6 +1211,126 @@ namespace Pico
 			private AvatarPrimitive _Primitive;
 
 			#endregion
+		}
+
+		internal struct MergedMeshData
+		{
+			public NativeArray<Vector3> positions;
+			public NativeArray<Vector3> normals;
+			public NativeArray<Vector4> tangents;
+			public NativeArray<Color32> colors;
+			public NativeArray<Vector2> uv1;
+			public NativeArray<Vector2> uv2;
+			public NativeArray<Vector2> uv3;
+			public NativeArray<Vector2> uv4;
+			public NativeArray<Vector2> materialIndices;
+			public NativeArray<int> boneNameHashes;
+			public NativeArray<Matrix4x4> invBindPoses;
+			public NativeArray<BoneWeight> boneWeights;
+			public NativeArray<uint> indices;
+        }
+
+		public class PicoAvatarMergedRenderMesh : MonoBehaviour
+		{
+			private SkinnedMeshRenderer _skinnedMeshRenderer;
+			public SkinnedMeshRenderer skinnedMeshRenderer { get => _skinnedMeshRenderer; }
+
+			private AvatarMergedMeshBuffer _meshBuffer;
+			public AvatarMergedMeshBuffer meshBuffer { get => _meshBuffer; }
+
+			private System.IntPtr _nativeHandle;
+			internal System.IntPtr nativeHandle { get => _nativeHandle; set { _nativeHandle = value; } }
+
+            internal void OnDestroy()
+			{
+                if (_skinnedMeshRenderer != null)
+                {
+                    _skinnedMeshRenderer.sharedMesh = null;
+                    _skinnedMeshRenderer.sharedMaterial = null;
+                    _skinnedMeshRenderer = null;
+                }
+
+				// Decreasing mesh buffer refcount
+				ReferencedObject.ReleaseField(ref _meshBuffer);
+                // Release the added ref count of nativeHandle when calling pav_AvatarLod_GetMergedRenderMesh
+                NativeObject.ReleaseNative(ref _nativeHandle);
+            }
+
+			private void ProcessMesh(AvatarSkeleton skeleton)
+			{
+				_skinnedMeshRenderer.sharedMesh = _meshBuffer.mesh;
+
+				// Update bones data
+                var bones = new Transform[_meshBuffer.boneNameHashes.Length];
+				for (int i = 0; i < _meshBuffer.boneNameHashes.Length; i++)
+				{
+					var bone = skeleton.GetTransform(_meshBuffer.boneNameHashes[i]);
+					if (bone == null)
+					{
+                        AvatarEnv.Log(DebugLogMask.GeneralError, String.Format("Transform for a bone {0} not found!", _meshBuffer.boneNameHashes[i]));
+					}
+					bones[i] = bone;
+				}
+				_skinnedMeshRenderer.bones = bones;
+				var rootBone = skeleton.GetTransform((int)_meshBuffer.rootBoneNameHash);
+				_skinnedMeshRenderer.rootBone = rootBone != null ? rootBone : skeleton.rootTransform;
+
+				// Update bounding box
+				_skinnedMeshRenderer.localBounds = _meshBuffer.mesh.bounds;
+			}
+
+			internal bool Build(AvatarLod lod, AvatarMergedMeshBuffer buffer)
+			{
+				if (_skinnedMeshRenderer == null)
+					_skinnedMeshRenderer = this.gameObject.AddComponent<SkinnedMeshRenderer>();
+
+				ReferencedObject.Replace(ref _meshBuffer, buffer);
+				ProcessMesh(lod.avatarSkeleton);
+
+				// _skinnedMeshRenderer.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+
+                // whether disable shadow casting.
+                if (PicoAvatarApp.instance.renderSettings.forceDisableCastShadow)
+                {
+                    _skinnedMeshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                }
+
+                // whether disable shadow casting.
+                if (PicoAvatarApp.instance.renderSettings.forceDisableReceiveShadow || lod.lodLevel > AvatarLodLevel.Lod2)
+                {
+                    _skinnedMeshRenderer.receiveShadows = false;
+                }
+                return true;
+            }
+
+			internal bool Build(AvatarLod lod, int hashCode, ref MergedMeshInfo meshInfo, ref MergedMeshData meshData)
+			{
+				if (_skinnedMeshRenderer == null)
+					_skinnedMeshRenderer = this.gameObject.AddComponent<SkinnedMeshRenderer>();
+
+				var nativeBuffer = pav_AvatarMergedRenderMesh_GetBuffer(nativeHandle);
+				_meshBuffer = AvatarMergedMeshBuffer.Create(hashCode, nativeBuffer, ref meshInfo, ref meshData);
+				ProcessMesh(lod.avatarSkeleton);
+
+				// _skinnedMeshRenderer.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+
+                // whether disable shadow casting.
+                if (PicoAvatarApp.instance.renderSettings.forceDisableCastShadow)
+                {
+                    _skinnedMeshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                }
+
+                // whether disable shadow casting.
+                if (PicoAvatarApp.instance.renderSettings.forceDisableReceiveShadow || lod.lodLevel > AvatarLodLevel.Lod2)
+                {
+                    _skinnedMeshRenderer.receiveShadows = false;
+                }
+                return true;
+			}
+
+			const string PavDLLName = DllLoaderHelper.PavDLLName;
+			[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+			private static extern System.IntPtr pav_AvatarMergedRenderMesh_GetBuffer(System.IntPtr nativeHandle);
 		}
 	}
 }

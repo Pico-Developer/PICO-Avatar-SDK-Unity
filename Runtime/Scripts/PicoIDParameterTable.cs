@@ -128,6 +128,13 @@ namespace Pico
 					throw new System.InvalidOperationException();
 				return pav_IDParameterTable_GetUIntParam(nativeHandle, paramId, ref val);
 			}
+			// Gets int parameter.
+			public NativeResult GetUIntParam(int paramId, ref int val)
+			{
+				if (nativeHandle == System.IntPtr.Zero)
+					throw new System.InvalidOperationException();
+				return pav_IDParameterTable_GetUIntParam(nativeHandle, paramId, ref val);
+			}
 
             // Sets int parameter.
             public void SetIntParam(uint paramId, int val)
@@ -455,6 +462,10 @@ namespace Pico
 			private static extern NativeResult pav_IDParameterTable_GetUIntParam(System.IntPtr dataHandle, uint paramId,
 				ref uint val);
 
+			[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
+			private static extern NativeResult pav_IDParameterTable_GetUIntParam(System.IntPtr dataHandle, int paramId,
+				ref int val);
+			
 			// float
 			[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
 			private static extern void pav_IDParameterTable_SetFloatParam(System.IntPtr dataHandle, uint paramId,

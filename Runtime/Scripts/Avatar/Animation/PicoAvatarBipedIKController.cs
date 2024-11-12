@@ -311,7 +311,6 @@ namespace Pico
 			/// Update scale for max tracking distance of the hand controllers.
 			/// After exceeding it, the hands will stop IK tracking and enter the idle state. 
 			/// </summary>
-			/// <param name="distance">Maximum tracking distance in meters</param>
 			public void UpdateMaxControllerDistance()
 			{
 				if (_rmiObject != null)

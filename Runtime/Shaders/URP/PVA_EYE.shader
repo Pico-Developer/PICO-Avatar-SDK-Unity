@@ -16,7 +16,8 @@
     	 _CubemapMip ("CubemapMip", Range(0, 7)) = 0
     	_CubemapLighting ("Cubemap-Lighting", Range(0, 1)) = 0
         _MatcapLighting("Matcap-Lighting", Range( 0 , 8)) = 3
-        
+        _SpecularAAScreenSpaceVariance("Specular AA Screen Space Variance", Range(0,1)) = 0.1
+        _SpecularAAThreshold("Specular AA Threshold", Range(0,1)) = 0.2
         // BlendMode
         [HideInInspector] _Surface("__surface", Float) = 0.0
         [HideInInspector] _Blend("__blend", Float) = 0.0
@@ -45,7 +46,7 @@
            
             #include "Universal/ShaderLibrary/Core.hlsl"
             #include "Universal/ShaderLibrary/Lighting.hlsl"
-            #include "Universal/ShaderLibrary/SurfaceInput.hlsl"
+            
 
             struct Attributes
             {
@@ -53,7 +54,7 @@
                 float3 normalOS      : NORMAL;
                 float4 tangentOS     : TANGENT;
                 float2 uv:TEXCOORD0;
-            	PAV_VERTEX_ID
+            	//PAV_VERTEX_ID
             	
             };
 
@@ -92,8 +93,24 @@
 			half4 _ColorRegion4;
             half _UsingAlbedoHue;
             half _ShaderType;
-            CBUFFER_END
+            half _SpecularAAScreenSpaceVariance;
+            half _SpecularAAThreshold;
 
+            float  _BaseColorAmplify;
+            float4 _CustomVec_0;
+            float4 _CustomVec_1;
+            float4 _CustomVec_2;
+            float4 _CustomVec_3;
+            float4 _CustomVec_4;
+            float4 _CustomVec_5;
+            float4 _CustomVec_6;
+            float4 _CustomVec_7;
+            float4 _CustomVec_8;
+            float  _MipBias;
+            CBUFFER_END
+            
+            #include "Universal/ShaderLibrary/SurfaceInput.hlsl"
+            
             TEXTURE2D(_MatCapMap);SAMPLER(sampler_MatCapMap);
             samplerCUBE _Cubemap;
 

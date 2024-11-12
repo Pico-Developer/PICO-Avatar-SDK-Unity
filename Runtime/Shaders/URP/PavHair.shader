@@ -14,7 +14,8 @@ Shader "PAV/URP/Hair"
         _SpecularPow ("SpecularPow", Float)= 3
         _NoiseTex("NoiseTex" , 2D) = "white"{} //扰动图
         
-        
+        _SpecularAAScreenSpaceVariance("Specular AA Screen Space Variance", Range(0,1)) = 0.1
+        _SpecularAAThreshold("Specular AA Threshold", Range(0,1)) = 0.2
         
         _BaseMap ("MainTex", 2D) = "white" {}
         _ColorRegionMap("ColorRegionMap", 2D) = "black" {}
@@ -57,15 +58,15 @@ Shader "PAV/URP/Hair"
             HLSLPROGRAM
 
             #pragma target 4.5
-            #pragma multi_compile _ PAV_VERTEX_FROM_BUFFER
-            #pragma multi_compile _ PAV_MERGED_TEXTURE
+            // #pragma multi_compile _ PAV_VERTEX_FROM_BUFFER
+            // #pragma multi_compile _ PAV_MERGED_TEXTURE
 
             #pragma vertex vert
             #pragma fragment frag
 
             #include "Universal/ShaderLibrary/Lighting.hlsl" 
             #include "Universal/ShaderLibrary/Core.hlsl"
-            #include "Universal/ShaderLibrary/SurfaceInput.hlsl"
+            
 
             CBUFFER_START(UnityPerMaterial)
             float4 _ColorBase;
@@ -84,8 +85,23 @@ Shader "PAV/URP/Hair"
 			half4 _ColorRegion4;
             half _UsingAlbedoHue;
             half _ShaderType;
-            
+            half _SpecularAAScreenSpaceVariance;
+            half _SpecularAAThreshold;
+            float  _BaseColorAmplify;
+            float4 _CustomVec_0;
+            float4 _CustomVec_1;
+            float4 _CustomVec_2;
+            float4 _CustomVec_3;
+            float4 _CustomVec_4;
+            float4 _CustomVec_5;
+            float4 _CustomVec_6;
+            float4 _CustomVec_7;
+            float4 _CustomVec_8;
+            float  _MipBias;
             CBUFFER_END
+
+            #include "Universal/ShaderLibrary/SurfaceInput.hlsl"
+
             TEXTURE2D(_NoiseTex);SAMPLER(sampler_NoiseTex);
 
             struct a2v

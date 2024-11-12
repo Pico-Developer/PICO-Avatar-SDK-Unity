@@ -16,9 +16,8 @@ _EMISSION    TEXTURE2D(_EmissionMap);        SAMPLER(sampler_EmissionMap);
 PAV_ToonShadowMap TEXTURE2D(_ToonShadowMap); SAMPLER(sampler_ToonShadowMap);
  */
  // amplify to adjust baked albedo texture.
- float _BaseColorAmplify;
 
-#ifdef PAV_MERGED_TEXTURE
+#if defined(PAV_MERGED_TEXTURE) || defined(_ENABLE_STATIC_MESH_BATCHING)
 TEXTURE2D_ARRAY(_BaseMapArray);                 SAMPLER(sampler_BaseMapArray);
 TEXTURE2D_ARRAY(_ColorRegionMapArray);          SAMPLER(sampler_ColorRegionMapArray);
 TEXTURE2D_ARRAY(_BumpMapArray);                 SAMPLER(sampler_BumpMapArray);
@@ -48,6 +47,7 @@ TEXTURE2D_ARRAY(_CustomMapArray_13);            SAMPLER(sampler_CustomMapArray_1
 TEXTURE2D_ARRAY(_CustomMapArray_14);            SAMPLER(sampler_CustomMapArray_14);
 TEXTURE2D_ARRAY(_CustomMapArray_15);            SAMPLER(sampler_CustomMapArray_15);
 TEXTURE2D_ARRAY(_CustomMapArray_16);            SAMPLER(sampler_CustomMapArray_16);
+
 #endif
 
 TEXTURE2D(_BaseMap);            SAMPLER(sampler_BaseMap);
@@ -74,27 +74,19 @@ TEXTURE2D(_CustomMap_14);       SAMPLER(sampler_CustomMap_14);
 TEXTURE2D(_CustomMap_15);       SAMPLER(sampler_CustomMap_15);
 TEXTURE2D(_CustomMap_16);       SAMPLER(sampler_CustomMap_16);
 
-uniform float4 _CustomVec_0;
-uniform float4 _CustomVec_1;
-uniform float4 _CustomVec_2;
-uniform float4 _CustomVec_3;
-uniform float4 _CustomVec_4;
-uniform float4 _CustomVec_5;
-uniform float4 _CustomVec_6;
-uniform float4 _CustomVec_7;
-uniform float4 _CustomVec_8;
+
 
 #ifdef PAV_ToonShadowMap
-    TEXTURE2D(_ToonShadowMap);        SAMPLER(sampler_ToonShadowMap);
+TEXTURE2D(_ToonShadowMap);        SAMPLER(sampler_ToonShadowMap);
 #endif
 #ifdef _OCCLUSIONMAP
-    TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
+TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
 #endif
 
 #ifdef _SECOND_BASEMAP
 static float3 _uv2;
 TEXTURE2D(_SecondBaseMap);                          SAMPLER(sampler_SecondBaseMap);
-#ifdef PAV_MERGED_TEXTURE
+#if defined(PAV_MERGED_TEXTURE) || defined(_ENABLE_STATIC_MESH_BATCHING)
 TEXTURE2D_ARRAY(_SecondBaseMapArray);               SAMPLER(sampler_SecondBaseMapArray);
 #endif
 #define PAV_GET_SECOND_UV(input) _uv2.xy = input.uv2
@@ -104,14 +96,14 @@ TEXTURE2D_ARRAY(_SecondBaseMapArray);               SAMPLER(sampler_SecondBaseMa
 
 #ifdef _SECOND_NORMALMAP
 TEXTURE2D(_SecondBumpMap);                          SAMPLER(sampler_SecondBumpMap);
-#ifdef PAV_MERGED_TEXTURE
+#if defined(PAV_MERGED_TEXTURE) || defined(_ENABLE_STATIC_MESH_BATCHING)
 TEXTURE2D_ARRAY(_SecondBumpMapArray);               SAMPLER(sampler_SecondBumpMapArray);
 #endif
 #endif
 
 #ifdef _SECOND_METALLICSPECGLOSSMAP
 TEXTURE2D(_SecondMetallicSpecGlossMap);             SAMPLER(sampler_SecondMetallicSpecGlossMap);
-#ifdef PAV_MERGED_TEXTURE
+#if defined(PAV_MERGED_TEXTURE) || defined(_ENABLE_STATIC_MESH_BATCHING)
 TEXTURE2D_ARRAY(_SecondMetallicSpecGlossMapArray);  SAMPLER(sampler_SecondMetallicSpecGlossMapArray);
 #endif
 #endif
@@ -140,7 +132,7 @@ half3 ApplyAlbedo(half3 albedo, half3 baseColor, half shaderType)
     half3 a = albedo;
     half3 b = baseColor;
 
-    uint shaderTypeI = (uint) round(shaderType);
+    uint shaderTypeI = (uint)round(shaderType);
 
     // modified by dujing and tianshengcai
     if (//shaderTypeI == PAV_SHADER_TYPE_BODY_BASE 
@@ -150,7 +142,7 @@ half3 ApplyAlbedo(half3 albedo, half3 baseColor, half shaderType)
     {
         //
         // albedo = dot(albedo, half3(0.2126729, 0.7151522, 0.0721750));
-        albedo = pow(albedo, 1.0/2.2);
+        albedo = pow(albedo, 1.0 / 2.2);
 
         // overlay
         result.r = albedo.r < 0.5 ? (2.0 * albedo.r * baseColor.r) : (1.0 - 2.0 * (1.0 - albedo.r) * (1.0 - baseColor.r));
@@ -169,7 +161,7 @@ half3 ApplyAlbedo(half3 albedo, half3 baseColor, half shaderType)
         result = a * b;
         result *= _BaseColorAmplify;
     }
-    
+
     return result;
 }
 
@@ -183,7 +175,7 @@ half3 ApplyAlbedo(half3 albedo, half3 baseColor, half shaderType, half4 albedoMa
 #ifdef PAV_COLOR_REGION_BAKED
     result = a * b;
 #else
-    uint shaderTypeI = (uint) round(shaderType);
+    uint shaderTypeI = (uint)round(shaderType);
 
     // multiply
     half3 colorBase = LinearToGamma22(a.rgb);
@@ -219,9 +211,76 @@ half3 ApplyAlbedo(half3 albedo, half3 baseColor, half shaderType, half4 albedoMa
     return result;
 }
 
-uniform float _MipBias;
+float GetMipBias()
+{
+    return _MipBias;
+}
 
-#ifdef PAV_MERGED_TEXTURE
+
+#if defined(PAV_MERGED_TEXTURE) || defined(_ENABLE_STATIC_MESH_BATCHING)
+
+#if defined(_ENABLE_STATIC_MESH_BATCHING)
+
+//struct UVAtlasInfo
+//{
+//    float4 flag;
+//    float4 transform;
+//};
+
+struct MergedMaterialUniformData
+{
+    // UVAtlasInfo atlas[32];
+    float4 atlas[32];
+    float4 uniform1;
+    float4 uniform2;
+    float4 uniform3;
+    float4 uniform4;
+    float4 baseColor;
+    float4 outlineColor;
+    float4 specColor;
+    float4 emissiveColor;
+    float4 baseMapST;
+    float4 colorRegion[4];
+    float4 customVec[9];
+};
+StructuredBuffer<MergedMaterialUniformData> _MtlData;
+
+struct CurrentUniform
+{
+    float4 u1, u2, u3, u4;
+} currentData;
+
+#define PAV_TEXTURE_KEY_BASE_MAP 0
+#define PAV_TEXTURE_KEY_COLOR_REGION_MAP 1
+#define PAV_TEXTURE_KEY_METALLIC_GLOSS_MAP 2
+#define PAV_TEXTURE_KEY_BUMP_MAP 3
+#define PAV_TEXTURE_KEY_SPEC_GLOSS_MAP 4 
+#define PAV_TEXTURE_KEY_OCCLUSION_MAP 6
+#define PAV_TEXTURE_KEY_EMISSION_MAP 7
+#define PAV_TEXTURE_KEY_TOON_SHADOW_MAP 11
+#define PAV_TEXTURE_KEY_SECOND_BASE_MAP 12
+#define PAV_TEXTURE_KEY_SECOND_BUMP_MAP 13
+#define PAV_TEXTURE_KEY_SECOND_METALLIC_SPEC_GLOSS_MAP 14
+
+void GetTextureSize(uint textureIndex, out float2 textureSize)
+{
+    textureSize = float2(0.0f, 0.0f);
+}
+
+void GetTextureInfo(uint textureIndex, uint mtlIndex, out float textureArrayIndex, out float4 uvScaleOffset)
+{
+    /*float4 v0 = _MtlData[mtlIndex].atlas[textureIndex].flag;
+    textureArrayIndex = v0.y;
+    uvScaleOffset = _MtlData[mtlIndex].atlas[textureIndex].transform;*/
+    float4 v0 = _MtlData[mtlIndex].atlas[textureIndex];
+    float2 floorXY = floor(v0.xy);
+    textureArrayIndex = floor(floorXY.x) > 0.0f ? floorXY.y : -1.0f;
+    uvScaleOffset = float4(v0.xy - floorXY, v0.zw);
+}
+
+#endif
+
+uint mtlIndex = 0;
 
 float GetMipLevel(float2 uv)
 {
@@ -233,18 +292,18 @@ float GetMipLevel(float2 uv)
 
 void GetMergedTextureUVFrag(inout float2 uv, out float textureArrayIndex, out float mip, uint textureIndex)
 {
-    float4 uvScaleOffset;
-    GetTextureInfo(textureIndex, textureArrayIndex, uvScaleOffset);
+    float4 uvScaleOffset = float4(1.0f, 1.0f, 0.0f, 0.0f);
+    // GetTextureAtlasInfo(textureIndex, mtlIndex, textureArrayIndex, uvScaleOffset);
     uv = fmod(uv, 1.0);
     if (uv.x < 0) uv.x += 1.0;
     if (uv.y < 0) uv.y += 1.0;
-    //PAV_FLIP_UV_Y(uv);
+    PAV_FLIP_UV_Y(uv);
 
     // add offset if sample on border
     float2 textureSize;
     GetTextureSize(textureIndex, textureSize); // texture array size
     textureSize *= uvScaleOffset.xy; // raw texture size
-    mip = max(GetMipLevel(uv * textureSize) + _MipBias, 0.0);
+    mip = max(GetMipLevel(uv * textureSize) + GetMipBias(), 0.0);
     float2 textureSizeInvHalf = 0.5 / textureSize * pow(2.0, mip) * 2.0;
 
     if (uv.x <= textureSizeInvHalf.x) uv.x += textureSizeInvHalf.x;
@@ -257,25 +316,23 @@ void GetMergedTextureUVFrag(inout float2 uv, out float textureArrayIndex, out fl
 
 half4 SampleAlbedoAlpha(float2 uv)
 {
+    float4 uvScaleOffset;
+
     float textureArrayIndex;
-    float mip;
-    GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_BASE_MAP);
-    half4 c = half4(1.0, 1.0, 1.0, 1.0);
-    if (textureArrayIndex >= 0)
-    {
-        c = SAMPLE_TEXTURE2D_ARRAY_LOD(_BaseMapArray, sampler_BaseMapArray, uv, textureArrayIndex, mip);
-    }
+    // float mip;
+    GetTextureInfo(PAV_TEXTURE_KEY_BASE_MAP, mtlIndex, textureArrayIndex, uvScaleOffset);
+    uv = uv * uvScaleOffset.zw + uvScaleOffset.xy;
+    // GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_BASE_MAP);
+    half4 c = textureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY(_BaseMapArray, sampler_BaseMapArray, uv, textureArrayIndex) : half4(1.0, 1.0, 1.0, 1.0);
 
 #ifdef _SECOND_BASEMAP
     {
         float2 uv2 = _uv2.xy;
         float secondTextureArrayIndex;
-        GetMergedTextureUVFrag(uv2, secondTextureArrayIndex, PAV_TEXTURE_KEY_SECOND_BASE_MAP);
-        half4 c2 = half4(c.rgb, 0);
-        if (secondTextureArrayIndex >= 0)
-        {
-            c2 = SAMPLE_TEXTURE2D_ARRAY(_SecondBaseMapArray, sampler_SecondBaseMapArray, uv2, secondTextureArrayIndex);
-        }
+        GetTextureInfo(PAV_TEXTURE_KEY_SECOND_BASE_MAP, mtlIndex, secondTextureArrayIndex, uvScaleOffset);
+        uv2 = uv2 * uvScaleOffset.zw + uvScaleOffset.xy;
+        // GetMergedTextureUVFrag(float3(uv2, uv.z), secondTextureArrayIndex, PAV_TEXTURE_KEY_SECOND_BASE_MAP);
+        half4 c2 = secondTextureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY(_SecondBaseMapArray, sampler_SecondBaseMapArray, uv2, secondTextureArrayIndex) : half4(c.rgb, 0);
         _uv2.z = c2.a;
         c.rgb = lerp(c.rgb, c2.rgb, _uv2.z);
     }
@@ -286,15 +343,14 @@ half4 SampleAlbedoAlpha(float2 uv)
 
 half4 SampleColorRegionsMap(float2 uv)
 {
+    float4 uvScaleOffset;
+
     float textureArrayIndex;
-    float mip;
-    GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_COLOR_REGION_MAP);
-    half4 c = half4(1.0, 1.0, 1.0, 1.0);
-    if (textureArrayIndex >= 0)
-    {
-        c = SAMPLE_TEXTURE2D_ARRAY_LOD(_ColorRegionMapArray, sampler_ColorRegionMapArray, uv, textureArrayIndex, mip);
-    }
-    return c;
+    // float mip;
+    GetTextureInfo(PAV_TEXTURE_KEY_COLOR_REGION_MAP, mtlIndex, textureArrayIndex, uvScaleOffset);
+    uv = uv * uvScaleOffset.zw + uvScaleOffset.xy;
+    // GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_COLOR_REGION_MAP);
+    return textureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY(_ColorRegionMapArray, sampler_ColorRegionMapArray, uv, textureArrayIndex) : half4(0.0, 0.0, 0.0, 0.0);
 }
 
 half4 SampleToonShadow(float2 uv)
@@ -302,49 +358,45 @@ half4 SampleToonShadow(float2 uv)
 #ifndef PAV_ToonShadowMap
     return 0;
 #else
+    float4 uvScaleOffset;
     float textureArrayIndex = 0;
-    float mip;
-    GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_TOON_SHADOW_MAP);
-    half4 c = half4(0.0, 0.0, 0.0, 1.0);
-    if (textureArrayIndex >= 0)
-    {
-        c = SAMPLE_TEXTURE2D_ARRAY_LOD(_ToonShadowMapArray, sampler_ToonShadowMapArray, uv, textureArrayIndex, mip);
-    }
-    return c;
+    // float mip;
+    GetTextureInfo(PAV_TEXTURE_KEY_TOON_SHADOW_MAP, mtlIndex, textureArrayIndex, uvScaleOffset);
+    uv = uv * uvScaleOffset.zw + uvScaleOffset.xy;
+    // GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_TOON_SHADOW_MAP);
+    return textureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY(_ToonShadowMapArray, sampler_ToonShadowMapArray, uv, textureArrayIndex) : half4(0.0, 0.0, 0.0, 1.0);
 #endif
 }
 
 half3 SampleNormal(float2 uv, half scale = 1.0h)
 {
 #ifdef _NORMALMAP
+    float4 uvScaleOffset;
+
     float textureArrayIndex = 0;
-    float mip;
-    GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_BUMP_MAP);
-    half4 n = half4(0.5, 0.5, 1.0, 0.5);
-    if (textureArrayIndex >= 0)
-    {
-        n = SAMPLE_TEXTURE2D_ARRAY_LOD(_BumpMapArray, sampler_BumpMapArray, uv, textureArrayIndex, mip);
-    }
+    // float mip;
+    GetTextureInfo(PAV_TEXTURE_KEY_BUMP_MAP, mtlIndex, textureArrayIndex, uvScaleOffset);
+    uv = uv * uvScaleOffset.zw + uvScaleOffset.xy;
+    // GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_BUMP_MAP);
+    half4 n = textureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY(_BumpMapArray, sampler_BumpMapArray, uv, textureArrayIndex) : half4(0.5, 0.5, 1.0, 0.5);
 
 #ifdef _SECOND_NORMALMAP
     {
         float2 uv2 = _uv2.xy;
         float secondTextureArrayIndex;
-        GetMergedTextureUVFrag(uv2, secondTextureArrayIndex, PAV_TEXTURE_KEY_SECOND_BUMP_MAP);
-        half3 n2 = n.rgb;
-        if (secondTextureArrayIndex >= 0)
-        {
-            n2 = SAMPLE_TEXTURE2D_ARRAY(_SecondBumpMapArray, sampler_SecondBumpMapArray, uv2, secondTextureArrayIndex).rgb;
-        }
+        GetTextureInfo(PAV_TEXTURE_KEY_SECOND_BUMP_MAP, mtlIndex, secondTextureArrayIndex, uvScaleOffset);
+        uv2 = uv2 * uvScaleOffset.zw + uvScaleOffset.xy;
+        // GetMergedTextureUVFrag(float3(uv2, uv.z), secondTextureArrayIndex, PAV_TEXTURE_KEY_SECOND_BUMP_MAP);
+        half3 n2 = secondTextureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY(_SecondBumpMapArray, sampler_SecondBumpMapArray, uv2, secondTextureArrayIndex).rgb : n.rgb;
         n.rgb = lerp(n.rgb, n2, _uv2.z);
     }
 #endif
 
-    #if BUMP_SCALE_NOT_SUPPORTED
-        return UnpackNormal(n);
-    #else
-        return UnpackNormalScale(n, scale);
-    #endif
+#if BUMP_SCALE_NOT_SUPPORTED
+    return UnpackNormal(n);
+#else
+    return UnpackNormalScale(n, scale);
+#endif
 #else
     return half3(0.0h, 0.0h, 1.0h);
 #endif
@@ -355,14 +407,13 @@ half3 SampleEmission(float2 uv, half3 emissionColor)
 #ifndef _EMISSION
     return 0;
 #else
+    float4 uvScaleOffset;
     float textureArrayIndex = 0;
-    float mip;
-    GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_EMISSION_MAP);
-    half4 c = half4(0.0, 0.0, 0.0, 1.0);
-    if (textureArrayIndex >= 0)
-    {
-        c = SAMPLE_TEXTURE2D_ARRAY_LOD(_EmissionMapArray, sampler_EmissionMapArray, uv, textureArrayIndex, mip);
-    }
+    // float mip;
+    GetTextureInfo(PAV_TEXTURE_KEY_EMISSION_MAP, mtlIndex, textureArrayIndex, uvScaleOffset);
+    uv = uv * uvScaleOffset.zw + uvScaleOffset.xy;
+    // GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_EMISSION_MAP);
+    half4 c = textureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY(_EmissionMapArray, sampler_EmissionMapArray, uv, textureArrayIndex) : half4(0.0, 0.0, 0.0, 1.0);
     return c.rgb * emissionColor;
 #endif
 }
@@ -370,14 +421,13 @@ half3 SampleEmission(float2 uv, half3 emissionColor)
 half SampleOcclusionMap(float2 uv)
 {
 #ifdef _OCCLUSIONMAP
+    float4 uvScaleOffset;
     float textureArrayIndex = 0;
-    float mip;
-    GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_OCCLUSION_MAP);
-    half4 c = half4(1.0, 1.0, 1.0, 1.0);
-    if (textureArrayIndex >= 0)
-    {
-        c = SAMPLE_TEXTURE2D_ARRAY_LOD(_OcclusionMapArray, sampler_OcclusionMapArray, uv, textureArrayIndex, mip);
-    }
+    // float mip;
+    GetTextureInfo(PAV_TEXTURE_KEY_OCCLUSION_MAP, mtlIndex, textureArrayIndex, uvScaleOffset);
+    uv = uv * uvScaleOffset.zw + uvScaleOffset.xy;
+    // GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_OCCLUSION_MAP);
+    half4 c = textureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY(_OcclusionMapArray, sampler_OcclusionMapArray, uv, textureArrayIndex) : half4(1.0, 1.0, 1.0, 1.0);
     return c.g;
 #else
     return 1.0;
@@ -386,25 +436,22 @@ half SampleOcclusionMap(float2 uv)
 
 half4 SampleSpecGlossMap(float2 uv)
 {
+    float4 uvScaleOffset;
     float textureArrayIndex = 0;
-    float mip;
-    GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_SPEC_GLOSS_MAP);
-    half4 c = half4(1.0, 1.0, 1.0, 1.0);
-    if (textureArrayIndex >= 0)
-    {
-        c = SAMPLE_TEXTURE2D_ARRAY_LOD(_SpecGlossMapArray, sampler_SpecGlossMapArray, uv, textureArrayIndex, mip);
-    }
+    // float mip;
+    GetTextureInfo(PAV_TEXTURE_KEY_SPEC_GLOSS_MAP, mtlIndex, textureArrayIndex, uvScaleOffset);
+    uv = uv + uvScaleOffset.zw + uvScaleOffset.xy;
+    // GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_SPEC_GLOSS_MAP);
+    half4 c = textureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY(_SpecGlossMapArray, sampler_SpecGlossMapArray, uv, textureArrayIndex) : half4(1.0, 1.0, 1.0, 1.0);
 
 #ifdef _SECOND_METALLICSPECGLOSSMAP
     {
         float2 uv2 = _uv2.xy;
         float secondTextureArrayIndex;
-        GetMergedTextureUVFrag(uv2, secondTextureArrayIndex, PAV_TEXTURE_KEY_SECOND_METALLIC_SPEC_GLOSS_MAP);
-        half4 c2 = c;
-        if (secondTextureArrayIndex >= 0)
-        {
-            c2 = SAMPLE_TEXTURE2D_ARRAY(_SecondMetallicSpecGlossMapArray, sampler_SecondMetallicSpecGlossMapArray, uv2, secondTextureArrayIndex);
-        }
+        GetTextureInfo(PAV_TEXTURE_KEY_SECOND_METALLIC_SPEC_GLOSS_MAP, mtlIndex, secondTextureArrayIndex, uvScaleOffset);
+        uv2 = uv2 * uvScaleOffset.zw + uvScaleOffset.xy;
+        // GetMergedTextureUVFrag(uv2, secondTextureArrayIndex, PAV_TEXTURE_KEY_SECOND_METALLIC_SPEC_GLOSS_MAP);
+        half4 c2 = secondTextureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY(_SecondMetallicSpecGlossMapArray, sampler_SecondMetallicSpecGlossMapArray, uv2, secondTextureArrayIndex) : c;
         c = lerp(c, c2, _uv2.z);
     }
 #endif
@@ -414,25 +461,22 @@ half4 SampleSpecGlossMap(float2 uv)
 
 half4 SampleMetallicGlossMap(float2 uv)
 {
+    float4 uvScaleOffset;
     float textureArrayIndex = 0;
-    float mip;
-    GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_METALLIC_GLOSS_MAP);
-    half4 c = half4(1.0, 1.0, 1.0, 1.0);
-    if (textureArrayIndex >= 0)
-    {
-        c = SAMPLE_TEXTURE2D_ARRAY_LOD(_MetallicGlossMapArray, sampler_MetallicGlossMapArray, uv, textureArrayIndex, mip);
-    }
+    // float mip;
+    GetTextureInfo(PAV_TEXTURE_KEY_METALLIC_GLOSS_MAP, mtlIndex, textureArrayIndex, uvScaleOffset);
+    uv = uv * uvScaleOffset.zw + uvScaleOffset.xy;
+    // GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_METALLIC_GLOSS_MAP);
+    half4 c = textureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY(_MetallicGlossMapArray, sampler_MetallicGlossMapArray, uv, textureArrayIndex) : half4(0.0, 0.0, 0.0, 0.0);
 
 #ifdef _SECOND_METALLICSPECGLOSSMAP
     {
         float2 uv2 = _uv2.xy;
         float secondTextureArrayIndex;
-        GetMergedTextureUVFrag(uv2, secondTextureArrayIndex, PAV_TEXTURE_KEY_SECOND_METALLIC_SPEC_GLOSS_MAP);
-        half4 c2 = c;
-        if (secondTextureArrayIndex >= 0)
-        {
-            c2 = SAMPLE_TEXTURE2D_ARRAY(_SecondMetallicSpecGlossMapArray, sampler_SecondMetallicSpecGlossMapArray, uv2, secondTextureArrayIndex);
-        }
+        GetTextureInfo(PAV_TEXTURE_KEY_SECOND_METALLIC_SPEC_GLOSS_MAP, mtlIndex, secondTextureArrayIndex, uvScaleOffset);
+        uv2 = uv2 * uvScaleOffset.zw + uvScaleOffset.xy;
+        // GetMergedTextureUVFrag(float3(uv2, uv.z), secondTextureArrayIndex, PAV_TEXTURE_KEY_SECOND_METALLIC_SPEC_GLOSS_MAP);
+        half4 c2 = secondTextureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY(_SecondMetallicSpecGlossMapArray, sampler_SecondMetallicSpecGlossMapArray, uv2, secondTextureArrayIndex) : c;
         c = lerp(c, c2, _uv2.z);
     }
 #endif
@@ -446,13 +490,29 @@ half4 SampleMetallicGlossMap(float2 uv)
         float textureArrayIndex = 0; \
         float mip; \
         GetMergedTextureUVFrag(uv, textureArrayIndex, mip, PAV_TEXTURE_KEY_CUSTOM_MAP_0 + index); \
-        half4 c = half4(1.0, 1.0, 1.0, 1.0); \
-        if (textureArrayIndex >= 0) \
-        { \
-            c = SAMPLE_TEXTURE2D_ARRAY_LOD(_CustomMapArray_##index, sampler_CustomMapArray_##index, uv, textureArrayIndex, mip); \
-        } \
-        return c; \
+        return textureArrayIndex >= 0.0f ? SAMPLE_TEXTURE2D_ARRAY_LOD(_CustomMapArray_##index, sampler_CustomMapArray_##index, uv, textureArrayIndex, mip) : half4(1.0, 1.0, 1.0, 1.0); \
     }
+
+#ifdef _ENABLE_STATIC_MESH_BATCHING
+
+#define PAV_GET_CUTOFF(v) float v = currentData.u1.y; 
+#define PAV_GET_SMOOTHNESS(v) float v = currentData.u2.y; 
+#define PAV_GET_METALLIC(v) float v = currentData.u2.x; 
+#define PAV_GET_BUMP_SCALE(v) float v = currentData.u2.z; 
+#define PAV_GET_PARALLAX(v) float v = currentData.u1.w; 
+#define PAV_GET_OCCLUSION_STRENGTH(v) float v = currentData.u2.w;
+#define PAV_GET_SHADER_TYPE(v) float v = currentData.u1.x; 
+#define PAV_GET_USING_ALBEDO_HUE(v) float v = currentData.u1.z;
+#define PAV_GET_BASE_COLOR(v) half4 v = _MtlData[mtlIndex].baseColor;
+#define PAV_GET_SPEC_COLOR(v) half4 v = _MtlData[mtlIndex].specColor;
+#define PAV_GET_EMISSION_COLOR(v) half4 v = _MtlData[mtlIndex].emissiveColor;
+#define PAV_GET_BASE_COLOR_MASK1(v) half4 v = _MtlData[mtlIndex].colorRegion[0];
+#define PAV_GET_BASE_COLOR_MASK2(v) half4 v = _MtlData[mtlIndex].colorRegion[1];
+#define PAV_GET_BASE_COLOR_MASK3(v) half4 v = _MtlData[mtlIndex].colorRegion[2];
+#define PAV_GET_BASE_COLOR_MASK4(v) half4 v = _MtlData[mtlIndex].colorRegion[3];
+#define PAV_GET_CUSTOM_VECTOR(v, index) half4 v = _MtlData[mtlIndex].customVec[index];
+
+#else
 
 #define PAV_GET_MATERIAL_DATA(materialIndex) _mergedMaterialData = GetMaterialData((uint) round(materialIndex)); GetTextureSizes()
 #define PAV_GET_OUTLINE(v) float v = _mergedMaterialData.outline
@@ -481,18 +541,20 @@ half4 SampleMetallicGlossMap(float2 uv)
 #define PAV_GET_BASE_COLOR_MASK4(v) half4 v = _mergedMaterialData.colorRegion4
 #define PAV_GET_CUSTOM_VECTOR(v, index) half4 v = _mergedMaterialData.customVecs[index]
 
+#endif
+
 #else // !PAV_MERGED_TEXTURE
 
 half4 SampleAlbedoAlpha(float2 uv)
 {
     //PAV_FLIP_UV_Y(uv);
-    half4 c = SAMPLE_TEXTURE2D_BIAS(_BaseMap, sampler_BaseMap, uv, _MipBias);
+    half4 c = SAMPLE_TEXTURE2D_BIAS(_BaseMap, sampler_BaseMap, uv, GetMipBias());
 
 #ifdef _SECOND_BASEMAP
     {
         float2 uv2 = _uv2.xy;
         //PAV_FLIP_UV_Y(uv2);
-        half4 c2 = SAMPLE_TEXTURE2D_BIAS(_SecondBaseMap, sampler_SecondBaseMap, uv2, _MipBias);
+        half4 c2 = SAMPLE_TEXTURE2D_BIAS(_SecondBaseMap, sampler_SecondBaseMap, uv2, GetMipBias());
         _uv2.z = c2.a;
         c.rgb = lerp(c.rgb, c2.rgb, _uv2.z);
     }
@@ -504,8 +566,8 @@ half4 SampleAlbedoAlpha(float2 uv)
 half4 SampleColorRegionsMap(float2 uv)
 {
     //PAV_FLIP_UV_Y(uv);
-    half4 c = SAMPLE_TEXTURE2D_BIAS(_ColorRegionMap, sampler_ColorRegionMap, uv, _MipBias);
-    
+    half4 c = SAMPLE_TEXTURE2D_BIAS(_ColorRegionMap, sampler_ColorRegionMap, uv, GetMipBias());
+
     return c;
 }
 
@@ -515,7 +577,7 @@ half4 SampleToonShadow(float2 uv)
     return 0;
 #else
     //PAV_FLIP_UV_Y(uv);
-    return SAMPLE_TEXTURE2D_BIAS(_ToonShadowMap, sampler_ToonShadowMap, uv, _MipBias);
+    return SAMPLE_TEXTURE2D_BIAS(_ToonShadowMap, sampler_ToonShadowMap, uv, GetMipBias());
 #endif
 }
 
@@ -523,22 +585,22 @@ half3 SampleNormal(float2 uv, half scale = 1.0h)
 {
 #ifdef _NORMALMAP
     //PAV_FLIP_UV_Y(uv);
-    half4 n = SAMPLE_TEXTURE2D_BIAS(_BumpMap, sampler_BumpMap, uv, _MipBias);
+    half4 n = SAMPLE_TEXTURE2D_BIAS(_BumpMap, sampler_BumpMap, uv, GetMipBias());
 
 #ifdef _SECOND_NORMALMAP
     {
         float2 uv2 = _uv2.xy;
         //PAV_FLIP_UV_Y(uv2);
-        half3 n2 = SAMPLE_TEXTURE2D_BIAS(_SecondBumpMap, sampler_SecondBumpMap, uv2, _MipBias).rgb;
+        half3 n2 = SAMPLE_TEXTURE2D_BIAS(_SecondBumpMap, sampler_SecondBumpMap, uv2, GetMipBias()).rgb;
         n.rgb = lerp(n.rgb, n2, _uv2.z);
     }
 #endif
 
-    #if BUMP_SCALE_NOT_SUPPORTED
-        return UnpackNormal(n);
-    #else
-        return UnpackNormalScale(n, scale);
-    #endif
+#if BUMP_SCALE_NOT_SUPPORTED
+    return UnpackNormal(n);
+#else
+    return UnpackNormalScale(n, scale);
+#endif
 #else
     return half3(0.0h, 0.0h, 1.0h);
 #endif
@@ -550,7 +612,7 @@ half3 SampleEmission(float2 uv, half3 emissionColor)
     return 0;
 #else
     //PAV_FLIP_UV_Y(uv);
-    return SAMPLE_TEXTURE2D_BIAS(_EmissionMap, sampler_EmissionMap, uv, _MipBias).rgb * emissionColor;
+    return SAMPLE_TEXTURE2D_BIAS(_EmissionMap, sampler_EmissionMap, uv, GetMipBias()).rgb * emissionColor;
 #endif
 }
 
@@ -558,7 +620,7 @@ half SampleOcclusionMap(float2 uv)
 {
 #ifdef _OCCLUSIONMAP
     //PAV_FLIP_UV_Y(uv);
-    return SAMPLE_TEXTURE2D_BIAS(_OcclusionMap, sampler_OcclusionMap, uv, _MipBias).g;
+    return SAMPLE_TEXTURE2D_BIAS(_OcclusionMap, sampler_OcclusionMap, uv, GetMipBias()).g;
 #else
     return 1.0;
 #endif
@@ -567,12 +629,12 @@ half SampleOcclusionMap(float2 uv)
 half4 SampleSpecGlossMap(float2 uv)
 {
     //PAV_FLIP_UV_Y(uv);
-    half4 c = SAMPLE_TEXTURE2D_BIAS(_SpecGlossMap, sampler_SpecGlossMap, uv, _MipBias);
+    half4 c = SAMPLE_TEXTURE2D_BIAS(_SpecGlossMap, sampler_SpecGlossMap, uv, GetMipBias());
 
 #ifdef _SECOND_METALLICSPECGLOSSMAP
     {
         float2 uv2 = _uv2.xy;
-        half4 c2 = SAMPLE_TEXTURE2D_BIAS(_SecondMetallicSpecGlossMap, sampler_SecondMetallicSpecGlossMap, uv2, _MipBias);
+        half4 c2 = SAMPLE_TEXTURE2D_BIAS(_SecondMetallicSpecGlossMap, sampler_SecondMetallicSpecGlossMap, uv2, GetMipBias());
         c = lerp(c, c2, _uv2.z);
     }
 #endif
@@ -583,12 +645,12 @@ half4 SampleSpecGlossMap(float2 uv)
 half4 SampleMetallicGlossMap(float2 uv)
 {
     //PAV_FLIP_UV_Y(uv);
-    half4 c = SAMPLE_TEXTURE2D_BIAS(_MetallicGlossMap, sampler_MetallicGlossMap, uv, _MipBias);
+    half4 c = SAMPLE_TEXTURE2D_BIAS(_MetallicGlossMap, sampler_MetallicGlossMap, uv, GetMipBias());
 
 #ifdef _SECOND_METALLICSPECGLOSSMAP
     {
         float2 uv2 = _uv2.xy;
-        half4 c2 = SAMPLE_TEXTURE2D_BIAS(_SecondMetallicSpecGlossMap, sampler_SecondMetallicSpecGlossMap, uv2, _MipBias);
+        half4 c2 = SAMPLE_TEXTURE2D_BIAS(_SecondMetallicSpecGlossMap, sampler_SecondMetallicSpecGlossMap, uv2, GetMipBias());
         c = lerp(c, c2, _uv2.z);
     }
 #endif
@@ -599,7 +661,7 @@ half4 SampleMetallicGlossMap(float2 uv)
 #define PAV_SAMPLE_CUSTOM_MAP_FUNC(index) \
     half4 SampleCustomMap_##index(float2 uv) \
     { \
-        return SAMPLE_TEXTURE2D_BIAS(_CustomMap_##index, sampler_CustomMap_##index, uv, _MipBias); \
+        return SAMPLE_TEXTURE2D_BIAS(_CustomMap_##index, sampler_CustomMap_##index, uv, GetMipBias()); \
     }
 
 #define PAV_GET_MATERIAL_DATA(index)

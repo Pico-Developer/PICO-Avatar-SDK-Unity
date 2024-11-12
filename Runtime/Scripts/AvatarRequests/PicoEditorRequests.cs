@@ -18,7 +18,7 @@
 				{
 					if (PicoAvatarManager.instance != null)
 					{
-						uint errorCode = 1;
+						int errorCode = 1;
 						returnParams.GetUIntParam(0, ref errorCode);
 						var returnData = returnParams.GetUTF8StringParam(1);
 						//

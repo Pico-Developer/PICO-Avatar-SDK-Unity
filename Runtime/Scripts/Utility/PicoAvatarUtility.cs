@@ -4,8 +4,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Linq;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+#if !NO_XR && UNITY_EDITOR
+using Pico.Platform.Editor;
+#endif
+
+#if UNITY_EDITOR
 using UnityEditor;
+using Menu = UnityEditor.Menu;
+#endif
+
+
 
 namespace Pico
 {
@@ -267,8 +277,21 @@ namespace Pico
 					case Pico.Avatar.AvatarPixelFormat.RGB8_sRGB:
 						return TextureFormat.RGB24;
 
+					case Pico.Avatar.AvatarPixelFormat.RGBA16Sint:
+					case Pico.Avatar.AvatarPixelFormat.RGBA16Uint:
+					case Pico.Avatar.AvatarPixelFormat.RGBA16Snorm:
+					case Pico.Avatar.AvatarPixelFormat.RGBA16Unorm:
+					case Pico.Avatar.AvatarPixelFormat.RGBA16Sscaled:
+					case Pico.Avatar.AvatarPixelFormat.RGBA16Uscaled:
+					case Pico.Avatar.AvatarPixelFormat.RGBA16Sfloat:
+						return TextureFormat.RGBAHalf;
+
+					case Pico.Avatar.AvatarPixelFormat.RGBA32Sfloat:
+						return TextureFormat.RGBAFloat;
+
 					// TODO: RGB not implemented yet.
 					case Pico.Avatar.AvatarPixelFormat.ASTC_4x4_sRGB:
+					case Pico.Avatar.AvatarPixelFormat.ASTC_4x4_LDR:
 						return TextureFormat.ASTC_4x4;
 					case Pico.Avatar.AvatarPixelFormat.ASTC_5x5_sRGB:
 						return TextureFormat.ASTC_5x5;
@@ -917,6 +940,29 @@ namespace Pico
 			{
 				return (NationType)PlayerPrefs.GetInt("NationSelect", 1);;
 			}
+	#if !NO_XR
+			public static bool IsCnDevice()
+			{
+				var config = Resources.Load<TextAsset>("PicoSdkPCConfig");
+				if (config == null)
+					return GetPCNation() == NationType.China;
+				var obj = JsonConvert.DeserializeObject<JObject>(config.text);
+				if (obj != null)
+				{
+					var general = obj.Value<JObject>("general");
+					if (general != null)
+					{
+						var region = general.Value<string>("region");
+						if (Enum.TryParse(region, out Region type))
+						{
+							Debug.Log($"@@@Platform Region = " + type);
+							return type == Region.cn;
+						}
+					}
+				}
+				return GetPCNation() == NationType.China;
+			}
+	#endif
 			#endregion
 #endif
 		}

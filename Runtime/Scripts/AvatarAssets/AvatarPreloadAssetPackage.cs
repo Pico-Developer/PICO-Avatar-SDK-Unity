@@ -103,7 +103,7 @@ namespace Pico
 				}
 
 				//    AvatarEnv.Log(DebugLogMask.GeneralWarn, String.Format("Failed to read package manifestion. packageName:{0} reason:{1}", packageName ,ex.Message));
-				callback(null, NativeResult.NotFound, "");
+				callback(null, NativeResult.FileNotFound, "");
 			}
 
 			// coroutine to load embeded file data.
@@ -112,7 +112,7 @@ namespace Pico
 			{
 				if (fileName == null || fileName.Length < 2)
 				{
-					callback(null, NativeResult.BadParameter, "");
+					callback(null, NativeResult.ParameterError, "");
 					yield break;
 				}
 
@@ -141,7 +141,7 @@ namespace Pico
 							string.Format("Failed to load manifest file in preload package. package:{0} file: {1}",
 								packageName, fileName));
 						//TODO: 
-						callback(null, NativeResult.Unknown, webRequest.error);
+						callback(null, NativeResult.Failed, webRequest.error);
 					}
 					else
 					{

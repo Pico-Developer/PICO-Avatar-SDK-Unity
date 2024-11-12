@@ -819,7 +819,7 @@ uint GetMaterialIndex(StaticBufferDesc desc, uint vid)
     return u & 0xffu;
 }
 
-void GetTextureInfo(uint textureIndex, out float textureArrayIndex, out float4 uvScaleOffset)
+void GetTextureInfo(uint textureIndex, uint mtlIndex, out float textureArrayIndex, out float4 uvScaleOffset)
 {
     uvScaleOffset = _mergedMaterialData.textureInfos[textureIndex].uvScaleOffset;
     textureArrayIndex = _mergedMaterialData.textureInfos[textureIndex].textureArrayIndex;

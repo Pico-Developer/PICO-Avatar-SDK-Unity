@@ -72,7 +72,7 @@ namespace Pico
 					}
 					else
 					{
-						returnArguments.SetUIntParam(0, (uint)NativeResult.Unknown);
+						returnArguments.SetUIntParam(0, (uint)NativeResult.Failed);
 						//
 						this.DoReturn();
 					}
@@ -108,7 +108,7 @@ namespace Pico
 					}
 					else
 					{
-						callback(null, NativeResult.NotFound, null);
+						callback(null, NativeResult.FileNotFound, null);
 					}
 				}
 				else if (root == ResourceRootType.LocalFileSystem)
@@ -126,7 +126,7 @@ namespace Pico
 					}
 					else
 					{
-						callback(null, NativeResult.NotFound, null);
+						callback(null, NativeResult.FileNotFound, null);
 					}
 				}
 				else if (root == ResourceRootType.ReadOnlyAssets)
@@ -161,7 +161,7 @@ namespace Pico
 			{
 				if (fileName == null || fileName.Length < 2)
 				{
-					callback(null, NativeResult.BadParameter, "");
+					callback(null, NativeResult.ParameterError, "");
 					yield break;
 				}
 
@@ -188,7 +188,7 @@ namespace Pico
 							string.Format("Failed to load embeded file: {0}", fileName));
 
 						//TODO: 
-						callback(null, NativeResult.Unknown, webRequest.error);
+						callback(null, NativeResult.Failed, webRequest.error);
 					}
 					else
 					{

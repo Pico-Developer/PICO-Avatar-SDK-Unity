@@ -1,5 +1,7 @@
 ﻿#if NO_XR
 
+#define SWIFT_ENABLE
+
 using UnityEngine;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
@@ -173,7 +175,8 @@ namespace Pico
 
             #region Public Fields
             public const int BodyTrackerRoleCount = (int)BodyTrackerRole.ROLE_NUM;
-            
+            public System.Action<bool> CalibStateChangedCallback { private get; set; } = null;
+
             /// <summary>
             /// Whether the PICO Motion Tracker has completed calibration.
             /// </summary>
@@ -185,24 +188,28 @@ namespace Pico
             {
                 get
                 {
+#if SWIFT_ENABLE
                     int calibrated = -1;
                     PT_GetSwiftCalibState(ref calibrated);
 
                     if (_bodyTrackingData.bodyTrackingCalibrateState != 1 && calibrated == 1)
                     {
-                        // After calibration, use body tracking driving.
-                        _owner?.bodyAnimController?.SetUseBodyTracking(true);
+                        // after calibration
+                        CalibStateChangedCallback?.Invoke(true);
 
                         _isFirstFrame = true;
                     }
                     else if (_bodyTrackingData.bodyTrackingCalibrateState == 1 && calibrated != 1)
                     {
-                        // After disconnection, use IK driving.
-                        _owner?.bodyAnimController?.SetUseBodyTracking(false);
+                        // after disconnection
+                        CalibStateChangedCallback?.Invoke(false);
                     }
 
                     _bodyTrackingData.bodyTrackingCalibrateState = calibrated;
                     return calibrated == 1;
+#else
+                    return false;
+#endif
                 }
             }
             #endregion
@@ -226,7 +233,9 @@ namespace Pico
             /// </param>
             public void SetSwiftMode(int swiftMode)
             {
+#if SWIFT_ENABLE
                 PT_SetBodyTrackingMode(swiftMode);
+#endif
             }
 
             /// <summary>
@@ -236,7 +245,10 @@ namespace Pico
             public override void FitGround()
             {
                 base.FitGround();
+
+#if SWIFT_ENABLE
                 _toAdjustHeight = (float)_bodyTrackerResult.trackingdata[(int)BodyTrackerRole.Pelvis].localpose.PosY - _tPosePelvisHeight;
+#endif
             }
             #endregion
 
@@ -247,6 +259,7 @@ namespace Pico
 
                 base.Initialize(nativeHandler_, owner);
 
+#if SWIFT_ENABLE
                 _bodyTrackerResult = new BodyTrackerResult();
                 _bodyTrackerResult.trackingdata = new BodyTrackerTransform[BodyTrackerRoleCount];
 
@@ -255,10 +268,12 @@ namespace Pico
                 _bodyTrackingData.bodyTrackingWorldPositions = new Vector3[BodyTrackerRoleCount];
                 _bodyTrackingData.bodyTrackingWorldOrientations = new Quaternion[BodyTrackerRoleCount];
 
-                _tPosePelvisHeight = owner.bodyAnimController.GetJointWorldXForm(JointType.Hips).position.y;
+                const float kPelvisHeightOffset = -0.012f;
+                _tPosePelvisHeight = owner.bodyAnimController.GetJointXForm(JointType.Hips).position.y + kPelvisHeightOffset;
 
                 SetSwiftMode(1);
                 UpdateBonesLength(owner.bodyAnimController);
+#endif
             }
 
             internal override void UpdateButtonStatus()
@@ -277,6 +292,7 @@ namespace Pico
 
                 base.UpdateDevicePose();
 
+#if SWIFT_ENABLE
                 if (!IsCalibrated) return;
 
                 if (!_owner.bodyAnimController.isUsingBodyTracking) return;
@@ -307,9 +323,12 @@ namespace Pico
                 }
 
                 pav_AvatarBodyTrackingDeviceInputReader_SetDeviceInputData(nativeHandle, ref _bodyTrackingData);
+#endif
             }
             #endregion
 
+
+#if SWIFT_ENABLE
             #region Private Methods
             private void ProcessTrackingData()
             {
@@ -338,6 +357,8 @@ namespace Pico
                 // Set the xz of root joint to 0.
                 _bodyTrackerResult.trackingdata[(int)BodyTrackerRole.Pelvis].localpose.PosX = 0;
                 _bodyTrackerResult.trackingdata[(int)BodyTrackerRole.Pelvis].localpose.PosZ = 0;
+
+                _owner.bodyAnimController.needUpdateEntityUnityXFormFromNative = false;
             }
 
             // Fix the Avatar's feet on the ground.
@@ -505,6 +526,7 @@ namespace Pico
             [DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
             private static extern NativeResult pav_AvatarBodyTrackingDeviceInputReader_GetDeviceInputData(System.IntPtr nativeHandle, ref BodyTrackingData data);
             #endregion
+#endif
         }
     }
 }
@@ -548,6 +570,7 @@ namespace Pico
 			#region Public Fields
 
 			public const int BodyTrackerRoleCount = (int)BodyTrackerRole.ROLE_NUM;
+            public System.Action<bool> CalibStateChangedCallback { private get; set; } = null;
 
             /// <summary>
             /// Whether the PICO Motion Tracker has completed calibration.
@@ -562,8 +585,18 @@ namespace Pico
 				{
 					if (_bodyTrackingData.bodyTrackingCalibrateState == 1) return true;
 
-					PXR_Input.GetFitnessBandCalibState(ref _bodyTrackingData.bodyTrackingCalibrateState);
-					return _bodyTrackingData.bodyTrackingCalibrateState == 1;
+#if BODY_TRACKING_V1
+                    PXR_Input.GetMotionTrackerCalibState(ref _bodyTrackingData.bodyTrackingCalibrateState);
+#else
+                    PXR_Input.GetFitnessBandCalibState(ref _bodyTrackingData.bodyTrackingCalibrateState);
+#endif
+                    if (_bodyTrackingData.bodyTrackingCalibrateState == 1)
+                    {
+                        // after calibration
+                        CalibStateChangedCallback?.Invoke(true);
+                    }
+
+                    return _bodyTrackingData.bodyTrackingCalibrateState == 1;
 				}
 			}
 
@@ -583,14 +616,20 @@ namespace Pico
             /// <summary>
             /// Set the tracking mode. If not set, the default tracking mode is leg tracking.
             /// </summary>
-            /// <param name="swiftMode">
-            ///   0 - leg tracking only, lower latency but lower tracking accuracy compared to full-body tracking;
-            ///   1 - full-body tracking, higher latency but higher tracking accuracy compared to leg tracking.
+            /// <param name="swiftMode">Selects a body tracking mode from the following:
+            /// Motion Tracker 1.0  `0`: leg tracking, nodes numbered 0 to 15 in `BodyTrackerRole` enum will return data.
+            /// Motion Tracker 1.0  `1`: full-body tracking, nodes numbered 0 to 23 in `BodyTrackerRole` enum will return data.
+            /// Motion Tracker 2.0  `0`: full-body tracking, nodes numbered 0 to 23 in `BodyTrackerRole` enum will return data. Low latency.
+            /// Motion Tracker 2.0  `1`: full-body tracking, nodes numbered 0 to 23 in `BodyTrackerRole` enum will return data. High latency.
             /// </param>
             public void SetSwiftMode(int swiftMode)
 			{
-				PXR_Input.SetSwiftMode(swiftMode);
-			}
+#if BODY_TRACKING_V1
+                PXR_Input.SetBodyTrackingMode((BodyTrackingMode)swiftMode);
+#else
+                PXR_Input.SetSwiftMode(swiftMode);
+#endif
+            }
 
             /// <summary>
             /// Launch the "PICO Motion Tracker" app.
@@ -599,9 +638,13 @@ namespace Pico
 			{
 				try
 				{
-					PXR_Input.OpenFitnessBandCalibrationAPP();
-				}
-				catch (System.Exception ex)
+#if BODY_TRACKING_V1
+                    PXR_MotionTracking.StartMotionTrackerCalibApp();
+#else
+                    PXR_Input.OpenFitnessBandCalibrationAPP();
+#endif
+                }
+                catch (System.Exception ex)
 				{
 					Debug.LogError($"[BodyTrackingInput] Open swift calibration app fail, error message: {ex.Message}");
 				}

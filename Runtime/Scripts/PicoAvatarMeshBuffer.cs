@@ -5,7 +5,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using System.Runtime.InteropServices;
 using Object = UnityEngine.Object;
-
+using UnityEngine.Rendering;
 
 namespace Pico
 {
@@ -145,8 +145,9 @@ namespace Pico
 			/// </summary>
 			/// <param name="nativeRenderMeshHandle"></param>
 			/// <param name="needTangent"></param>
-			/// <param name="allowGpuDataCompressd">allowGpuDataCompressd whether allow compress gpu data.</param>
+			/// <param name="allowGpuDataCompressed">allowGpuDataCompressd whether allow compress gpu data.</param>
 			/// <param name="depressSkin"></param>
+			/// /// <param name="useCustomMaterial"></param>
 			/// <returns>object has been reference increased.</returns>
 			internal static AvatarMeshBuffer CreateAndRefMeshBuffer(System.IntPtr nativeRenderMeshHandle,
 				bool needTangent,
@@ -204,7 +205,7 @@ namespace Pico
 			/// <param name="nativeRenderMeshHandle"></param>
 			/// <param name="meshInfo_"></param>
 			/// <param name="needTangent"></param>
-			/// <param name="allowGpuDataCompressd">allowGpuDataCompressd whether allow compress gpu data.</param>
+			/// <param name="allowGpuDataCompressed">allowGpuDataCompressd whether allow compress gpu data.</param>
 			/// <param name="depressSkin"></param>
 			/// <returns></returns>
 			private bool Create(System.IntPtr nativeRenderMeshHandle, MeshInfo meshInfo_, bool needTangent,
@@ -237,6 +238,7 @@ namespace Pico
 			/// <param name="nativeRenderMeshHandle"></param>
 			/// <param name="needTangent"></param>
 			/// <param name="depressSkin"></param>
+			/// /// <param name="useCustomMaterial"></param>
 			protected void CreateMesh(System.IntPtr nativeRenderMeshHandle, bool needTangent, bool depressSkin, bool useCustomMaterial)
 			{
 				if (_mesh != null)
@@ -629,7 +631,7 @@ namespace Pico
 			/// GetMorphAndSkinGpuDataInfo
 			/// </summary>
 			/// <param name="renderMeshHandle"></param>
-			/// <param name="allowGpuDataCompressd">allowGpuDataCompressd whether allow compress gpu data.</param>
+			/// <param name="allowGpuDataCompressed">allowGpuDataCompressd whether allow compress gpu data.</param>
 			/// <returns></returns>
 			private NativeResult GetMorphAndSkinGpuDataInfo(System.IntPtr renderMeshHandle, bool allowGpuDataCompressed)
 			{
@@ -659,7 +661,7 @@ namespace Pico
 			/// </summary>
 			/// <param name="renderMeshHandle"></param>
 			/// <param name="needTangent"></param>
-			/// <param name="allowGpuDataCompressd">allowGpuDataCompressd</param>
+			/// <param name="allowGpuDataCompressed">allowGpuDataCompressed</param>
 			protected void InitializeGpuData(System.IntPtr renderMeshHandle, bool needTangent,
 				bool allowGpuDataCompressed)
 			{
@@ -951,6 +953,123 @@ namespace Pico
 				ref MeshData meshData);
 
 			#endregion
+		}
+
+		public class AvatarMergedMeshBuffer : ReferencedObject
+		{
+			private Mesh _mesh;
+			public Mesh mesh { get => _mesh; }
+
+			private int[] _boneNameHashes;
+			public int[] boneNameHashes { get => _boneNameHashes; }
+
+			private uint _rootBoneNameHash;
+			internal uint rootBoneNameHash { get => _rootBoneNameHash; }
+
+			private System.IntPtr _nativeHandle;
+			private int _hashCode;
+
+            protected override void OnDestroy()
+            {
+                if (_mesh != null)
+                {
+                    UnityEngine.Object.Destroy(_mesh);
+                }
+                _meshBuffers.Remove(_hashCode); 
+				_hashCode = 0;
+                base.OnDestroy();
+            }
+
+            private static Dictionary<int, AvatarMergedMeshBuffer> _meshBuffers = new Dictionary<int, AvatarMergedMeshBuffer>();
+			internal static AvatarMergedMeshBuffer TryGetMergedMeshBuffer(int hashCode)
+			{
+				AvatarMergedMeshBuffer buffer;
+				if (_meshBuffers.TryGetValue(hashCode, out buffer))
+					return buffer;
+				else
+					return null;
+			}
+			internal static AvatarMergedMeshBuffer Create(int hashCode, System.IntPtr nativeHandle, ref MergedMeshInfo meshInfo, ref MergedMeshData meshData)
+			{
+				var buffer = new AvatarMergedMeshBuffer();
+				buffer.CreateMesh(ref meshInfo, ref meshData);
+				buffer._boneNameHashes = meshData.boneNameHashes.ToArray();
+				buffer._rootBoneNameHash = meshInfo.rootBoneNameHash;
+				buffer._nativeHandle = nativeHandle;
+				buffer._hashCode = hashCode;
+				buffer.Retain();
+				_meshBuffers.Add(hashCode, buffer);
+				return buffer;
+			}
+			private void CreateMesh(ref MergedMeshInfo meshInfo, ref MergedMeshData meshData)
+			{
+				_mesh = new Mesh();
+                _mesh.SetVertices(meshData.positions);
+				_mesh.SetNormals(meshData.normals);
+				if (meshInfo.tangentCount > 0)
+					_mesh.SetTangents(meshData.tangents);
+				if (meshInfo.colorCount > 0)
+					_mesh.SetColors(meshData.colors);
+				if (meshInfo.uv1Count > 0)
+					_mesh.SetUVs(0, meshData.uv1);
+				if (meshInfo.uv2Count > 0)
+					_mesh.SetUVs(1, meshData.uv2);
+				if (meshInfo.uv3Count > 0)
+					_mesh.SetUVs(2, meshData.uv3);
+				if (meshInfo.uv4Count > 0)
+					_mesh.SetUVs(3, meshData.uv4);
+				// Using uv channel 4 as material index
+				_mesh.SetUVs(4, meshData.materialIndices);
+				if (meshInfo.weight8 > 0)
+				{
+					// 8 weights
+					byte[] boneWeightsPerVertex = new byte[meshInfo.positionCount];
+					for (int idx = 0; idx < boneWeightsPerVertex.Length; ++idx)
+						boneWeightsPerVertex[idx] = 8;
+					BoneWeight1[] boneWeights = new BoneWeight1[meshInfo.positionCount * 8];
+					for (int idx = 0; idx < meshInfo.positionCount; ++idx)
+					{
+						var weight0 = meshData.boneWeights[idx * 2];
+						boneWeights[idx * 8].boneIndex = weight0.boneIndex0;
+						boneWeights[idx * 8].weight = weight0.weight0;
+						boneWeights[idx * 8 + 1].boneIndex = weight0.boneIndex1;
+						boneWeights[idx * 8 + 1].weight = weight0.weight1;
+						boneWeights[idx * 8 + 2].boneIndex = weight0.boneIndex2;
+						boneWeights[idx * 8 + 2].weight = weight0.weight2;
+						boneWeights[idx * 8 + 3].boneIndex = weight0.boneIndex3;
+						boneWeights[idx * 8 + 3].weight = weight0.weight3;
+
+						var weight1 = meshData.boneWeights[idx * 2 + 1];
+						boneWeights[idx * 8 + 4].boneIndex = weight1.boneIndex0;
+						boneWeights[idx * 8 + 4].weight = weight1.weight0;
+						boneWeights[idx * 8 + 5].boneIndex = weight1.boneIndex1;
+						boneWeights[idx * 8 + 5].weight = weight1.weight1;
+						boneWeights[idx * 8 + 6].boneIndex = weight1.boneIndex2;
+						boneWeights[idx * 8 + 6].weight = weight1.weight2;
+						boneWeights[idx * 8 + 7].boneIndex = weight1.boneIndex3;
+						boneWeights[idx * 8 + 7].weight = weight1.weight3;
+					}
+
+					var boneWeightsPerVertexArray = new NativeArray<byte>(boneWeightsPerVertex, Allocator.Temp);
+					var boneWeightsArray = new NativeArray<BoneWeight1>(boneWeights, Allocator.Temp);
+					_mesh.SetBoneWeights(boneWeightsPerVertexArray, boneWeightsArray);
+					boneWeightsPerVertexArray.Dispose();
+					boneWeightsArray.Dispose();
+				}
+				else
+				{
+					// Regular 4 weights
+                    _mesh.boneWeights = meshData.boneWeights.ToArray();
+				}
+				_mesh.bindposes = meshData.invBindPoses.ToArray();
+				if (meshInfo.positionCount > 65535)
+					_mesh.indexFormat = IndexFormat.UInt32;
+				else
+					_mesh.indexFormat = IndexFormat.UInt16;
+				_mesh.SetIndices<uint>(meshData.indices, MeshTopology.Triangles, 0, true);
+				//_mesh.bounds = new Bounds(meshInfo.boundCenter, meshInfo.boundSize);
+				_mesh.bounds = new Bounds(new Vector3(0.0f, 1.0f, 0.0f), new Vector3(1.5f, 2.0f, 1.5f));
+			}
 		}
 	}
 }

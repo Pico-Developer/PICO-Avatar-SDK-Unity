@@ -24,6 +24,9 @@ struct Attributes
 #if defined(_SECOND_BASEMAP)
     float2 uv2          : TEXCOORD2;
 #endif
+#if defined(_ENABLE_STATIC_MESH_BATCHING)
+    float2 mtlIndex     : TEXCOORD4;
+#endif
     UNITY_VERTEX_INPUT_INSTANCE_ID
     PAV_VERTEX_ID
 };
@@ -55,6 +58,10 @@ struct Varyings
 
 #if defined(_SECOND_BASEMAP)
     float2 uv2                      : TEXCOORD9;
+#endif
+
+#if defined(_ENABLE_STATIC_MESH_BATCHING)
+    nointerpolation float2 mtlIndex : TEXCOORD10;
 #endif
 
     float4 positionCS               : SV_POSITION;
@@ -177,6 +184,10 @@ Varyings LitPassVertex(Attributes input)
 
     output.positionCS = vertexInput.positionCS;
 
+#if defined(_ENABLE_STATIC_MESH_BATCHING)
+    output.mtlIndex = input.mtlIndex;
+#endif
+
     return output;
 }
 
@@ -256,9 +267,19 @@ half4 LitPassFragment(Varyings input) : SV_Target
     UNITY_SETUP_INSTANCE_ID(input);
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-    PAV_GET_MATERIAL_DATA(input.uv.z);
     PAV_GET_SECOND_UV(input);
+
+#ifdef _ENABLE_STATIC_MESH_BATCHING
+    mtlIndex = (uint)input.mtlIndex.x;
+    currentData.u1 = _MtlData[mtlIndex].uniform1;
+    currentData.u2 = _MtlData[mtlIndex].uniform2;
+    float shaderType = currentData.u1.x;
+
+#else
+    PAV_GET_MATERIAL_DATA(input.uv.z);
     PAV_GET_SHADER_TYPE(shaderType);
+
+#endif
 
 #if defined(_PARALLAXMAP)
 #if defined(REQUIRES_TANGENT_SPACE_VIEW_DIR_INTERPOLATOR)
@@ -298,6 +319,7 @@ half4 LitPassFragment(Varyings input) : SV_Target
 
     color.rgb = MixFog(color.rgb, inputData.fogCoord);
     color.a = OutputAlpha(color.a, _Surface);
+
 
     //color.rgb = surfaceData.albedo.rgb;
 

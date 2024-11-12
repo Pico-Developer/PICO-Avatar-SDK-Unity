@@ -188,7 +188,7 @@ namespace Pico
 				{
 					AvatarEnv.Log(DebugLogMask.GeneralError,
 						"PicoAvatarPreloadAssetPackageImportAsset data is invalid");
-					callback(NativeResult.BadParameter, "Please check data.");
+					callback(NativeResult.ParameterError, "Please check data.");
 					return;
 				}
 
@@ -204,7 +204,7 @@ namespace Pico
 				//}
 				if (!System.IO.Directory.Exists(packageOutDir))
 				{
-					callback(NativeResult.NotFound,
+					callback(NativeResult.FileNotFound,
 						String.Format("packagePathName is not a valid directory path. {0}",
 							importAsset.packagePathName));
 					return;
@@ -220,14 +220,14 @@ namespace Pico
 
 				if (_rmiObject == null)
 				{
-					callback(NativeResult.BadProgram,
+					callback(NativeResult.NullReferenceObject,
 						"LoadPackageAssets can not be invoked when AvatarManager does not be working.");
 					return;
 				}
 
 				if (_lastLoadingPackageCmd >= 0)
 				{
-					callback(NativeResult.BadProgram, "LoadPackageAssets can be started after previous one finished!");
+					callback(NativeResult.OperationPending, "LoadPackageAssets can be started after previous one finished!");
 					return;
 				}
 
@@ -264,7 +264,7 @@ namespace Pico
 						}
 						else
 						{
-							callback(NativeResult.Unknown, "Operation Expired");
+							callback(NativeResult.Failed, "Operation Expired");
 						}
 					});
 

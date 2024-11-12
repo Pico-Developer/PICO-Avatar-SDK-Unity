@@ -186,6 +186,218 @@ namespace Pico
 				}
 			}
 
+
+			static bool bCheckFlag = false;
+
+			void DeleteDirectory(string fullPath)
+			{
+#if !UNITY_ANDROID
+				if (System.IO.Directory.Exists(fullPath))
+				{
+					System.IO.Directory.Delete(fullPath, true);
+				}
+#endif
+			}
+
+			bool CheckAndInstallFallbackAvatarResources(bool forcedInstall = false)
+			{
+				//AvatarEnv.Log(DebugLogMask.GeneralInfo, "[FallbackAvatar] CheckAndInstallFallbackAvatarResources");
+				if (bCheckFlag)
+				{
+					return true;
+				}
+
+				//AvatarEnv.Log(DebugLogMask.GeneralInfo, $"[FallbackAvatar] AvatarEnv.avatarCachePath{AvatarEnv.avatarCachePath}");
+
+				string fullOutputPath = AvatarEnv.avatarCachePath + "/../";
+				int currentVersion = 1;
+				string checkFile = System.IO.Path.Combine(fullOutputPath, "FallbackAvatar.check");
+				bool needInstall = forcedInstall;
+				if (!forcedInstall)
+				{
+					if (System.IO.File.Exists(checkFile))
+					{
+						string content = System.IO.File.ReadAllText(checkFile);
+						if (int.TryParse(content, out int number))
+						{
+							if (currentVersion > number)
+							{
+								needInstall = true;
+							}
+						}
+						else
+						{
+							needInstall = true;
+						}
+					}
+					else
+					{
+						needInstall = true;
+					}
+				}
+
+				//AvatarEnv.Log(DebugLogMask.GeneralInfo, $"[FallbackAvatar] need install = {needInstall}");
+
+				if (!needInstall)
+				{
+					return true;
+				}
+				var asset = Resources.Load<TextAsset>("FallbackAvatar");
+				if (asset == null)
+				{
+					AvatarEnv.Log(DebugLogMask.GeneralError, "[FallbackAvatar] TextAsset is null !");
+					return false;
+				}
+				//AvatarEnv.Log(DebugLogMask.GeneralInfo, $"[FallbackAvatar] fullOutputPath = {fullOutputPath} ");
+				DeleteDirectory(fullOutputPath);
+
+				System.IO.Directory.CreateDirectory(fullOutputPath);
+
+				string fileName = "FallbackAvatar.zip"; 
+				string filePath = System.IO.Path.Combine(fullOutputPath, fileName);
+
+				try
+				{
+					System.IO.File.WriteAllBytes(filePath, asset.bytes);
+					AvatarEnv.Log(DebugLogMask.GeneralInfo, $"[FallbackAvatar] write the file succeed: {filePath}");
+
+					System.IO.Compression.ZipFile.ExtractToDirectory(filePath, fullOutputPath);
+
+					System.IO.File.WriteAllText(checkFile, currentVersion.ToString());
+				}
+				catch (System.Exception ex)
+				{
+					AvatarEnv.Log(DebugLogMask.GeneralError, $"[FallbackAvatar] write the file failed: {ex.Message}");
+
+					return false;
+				}
+				return true;
+			}
+
+			public PicoAvatar LoadFallbackLocalAvatar(AvatarLoadContext loadContext) 
+			{
+				bCheckFlag = CheckAndInstallFallbackAvatarResources();
+
+				loadContext.jsonConfig = @"
+				{
+					""info"": {
+						""sex"": ""male"",
+						""status"": ""Online"",
+						""continent"": ""EU"",
+						""background"": {
+							""image"": ""https://dfsedffe.png"",
+							""end_color"": [
+								133,
+								182,
+								255
+							],
+							""start_color"": [
+								148,
+								111,
+								253
+							]
+						},
+						""avatar_type"": ""preset""
+					},
+					""avatar"": {
+						""body"": {
+							""version"": 1,
+							""perParams"": [],
+							""technique"": ""Pico2-Bone"",
+							""floatIdParams"": []
+						},
+						""head"": {
+							""version"": 1,
+							""perParams"": [],
+							""technique"": ""Pico2-BS"",
+							""floatIdParams"": []
+						},
+						""skin"": {
+							""color"": """",
+							""white"": 0,
+							""softening"": 0
+						},
+						""assetPins"": [],
+						""skeleton"": {
+							""assetId"": ""FallbackAvatar/Skeleton/PicoVideoRole_rig_Skeleton20240905165158"",
+							""assetMeta"": {
+								""state"": ""Local"",
+								""path"": ""FallbackAvatar/Skeleton/PicoVideoRole_rig_Skeleton20240905165158""
+							}
+						},
+						""baseAnimation"": {
+							""assetId"": ""FallbackAvatar/AnimationSet/Base/PicoVideoRole_rig_BaseAnimation20240905165208"",
+							""assetMeta"": {
+								""state"": ""Local"",
+								""path"": ""FallbackAvatar/AnimationSet/Base/PicoVideoRole_rig_BaseAnimation20240905165208""
+							}
+						},
+						""baseBody"": {
+							""assetId"": ""FallbackAvatar/BaseBody/PicoVideoRole_rig_BaseBody20240905165215"",
+							""assetMeta"": {
+								""state"": ""Local"",
+								""path"": ""FallbackAvatar/BaseBody/PicoVideoRole_rig_BaseBody20240905165215""
+							}
+						}
+					},
+					""avatarStyle"": ""PicoCustomAvatar""
+				}";
+				// Use global animations.
+				loadContext.capabilities.animationFlags = (uint)PicoAvatarApp.instance.animationSettings.animationFlags;
+
+				// If the avatar with same user id exists, unload first.
+				if (_avatarDict.TryGetValue(loadContext.userId, out var avatar) && avatar != null)
+				{
+					AvatarEnv.Log(DebugLogMask.GeneralWarn,
+						string.Format("LoadAvatar will unload existing avatar. userId:{0}", loadContext.userId));
+					//
+					UnloadAvatar(loadContext.userId);
+				}
+
+				// Remove last one.
+				{
+					if (_avatarLoadContexts.ContainsKey(loadContext.userId))
+					{
+						_avatarLoadContexts.Remove(loadContext.userId);
+					}
+
+					// Cache capabilityes
+					_avatarLoadContexts.Add(loadContext.userId, loadContext);
+				}
+
+				// Load request will create avatar be invoke 
+				if (!loadContext.DoRequest(null, null))
+				{
+					AvatarEnv.Log(DebugLogMask.GeneralError, "LoadAvatar failed for bad parameters! ");
+					return null;
+				}
+
+				// Set capabilities.
+				_avatarDict.TryGetValue(loadContext.userId, out avatar);
+				//
+				if (avatar == null)
+				{
+					AvatarEnv.Log(DebugLogMask.GeneralError,
+						"LoadAvatar failed since js does not notify c# the to create new avatar! ");
+
+					// Assure remove from js in case previous c# did not unload.
+					if (this._rmiObject != null)
+					{
+						this._rmiObject.UnloadAvatar(loadContext.userId);
+
+						//Try load again.
+						{
+							// Load request will create avatar be invoke 
+							loadContext.DoRequest(null, null);
+							// Set capabilities.
+							_avatarDict.TryGetValue(loadContext.userId, out avatar);
+						}
+					}
+				}
+				return avatar;
+			}
+
+
 			/// <summary>
 			/// Create a new PicoAvatar and initiate an asynchronous loading avatar image
 			/// If the user Id in the parameter has been loaded, the PicoAvatar object currently created by the user will be returned
@@ -193,7 +405,9 @@ namespace Pico
 			/// and you need to wait for the subsequent process to complete the loading of Avatar
 			/// </summary>
 			/// <param name="loadContext">Avatar image configuration</param>
-			/// <param name="responsed">Image data return callback</param>
+			/// <param name="callback">callback</param>
+			/// <param name="characterType">callback</param>
+			/// <param name="characterVersion">Image data return callback</param>
 			/// <returns>Return null if avatar with same user id</returns>
 			public PicoAvatar LoadAvatar(AvatarLoadContext loadContext,
 				Action<PicoAvatar, AvatarEntity> callback = null, string characterType = "", string characterVersion = "")
@@ -586,6 +800,27 @@ namespace Pico
 #endif
 			}
 
+			/// <summary>
+			/// Request Android SD Card Permission
+			/// </summary>
+			public void RequestAndroidPermission()
+			{
+#if UNITY_ANDROID && !UNITY_EDITOR
+                try
+                {
+                    SetAvatarEditorJavaObject();
+                    var context = _unityPlayerJavaClass.GetStatic<AndroidJavaObject>("currentActivity");
+                    _avatarEditorJavaObject.Call("requestPermission", context);
+					UnityEngine.Debug.LogWarning("@@@RequestAndroidPermission Done!");
+                }
+                catch (System.Exception ex)
+                {
+					UnityEngine.Debug.LogWarning("@@@RequestAndroidPermission Failed!");
+                    Debug.Log(ex.ToString());
+                }
+#endif
+			}
+
 			#endregion
 
 
@@ -682,7 +917,7 @@ namespace Pico
 						if (x.Value.CheckNeedUpdateSimulationDataThisFrame() && x.Value.PreUpdateFrame(gameTime))
 						{
 							avatarEntitiesToUpdateSimulationDataThisFrame.Add(x.Value.entity);
-							x.Value.forceUpdateSkeletonFromNative = false;
+							x.Value.isAvatarLodDirty = false;
 						}
 					}
 				}
@@ -905,7 +1140,7 @@ namespace Pico
 						AppConfigData configData = new AppConfigData();
 						configData.PicoDevelopAppId = appId;
 						configString = JsonUtility.ToJson(configData);
-						
+					
 						AvatarEnv.Log(DebugLogMask.GeneralInfo, "configString= " + configString);
 						PicoAvatarApp.instance.extraSettings.configString = configString;
 #endif
@@ -937,7 +1172,7 @@ namespace Pico
 					isReady = true;
 
 					CreateAvatarManagerEventReceiver();
-
+				
 					// pass extra parameters to native part.
 					{
 						Dictionary<string, object> configParams = new Dictionary<string, object>();
@@ -957,9 +1192,32 @@ namespace Pico
 
 						configParams["disablePrimitiveMerge"] =
 							(bool)PicoAvatarApp.instance.renderSettings.disablePrimitiveMerge;
-
+#if !NO_XR
+						//avatar tracker params
+						string appID = CoreService.GetAppID();
+						configParams["PicoDevelopAppId"] = appID;
+						configParams["packageName"] = Application.identifier;
+						configParams["packageNameVersion"] = Application.version;
+						configParams["avatarCoreVersion"] = PicoAvatarApp.instance.appSettings.avatarCoreVersion;
+						configParams["avatarSdkVersion"] = AppSettings.avatarSdkVersion;
+#endif
+						
+						
 						string paramJsonText = JsonConvert.SerializeObject(configParams);
 						PostInitialize(AppSettings.avatarSdkVersion, paramJsonText);
+#if !NO_XR
+						VerifyAppModeRequest.DoRequest(appID, (errorCode, type) =>
+						{
+							if (errorCode == 0)
+							{
+								configParams.Clear();
+								configParams["appMode"] = type;
+								PicoAvatarApp.instance.appMode = (AppModeType)type;
+								PostInitialize(AppSettings.avatarSdkVersion, JsonConvert.SerializeObject(configParams));
+								configParams = null;
+							}
+						});
+#endif
 					}
 
 

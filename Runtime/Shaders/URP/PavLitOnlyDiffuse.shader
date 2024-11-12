@@ -2,6 +2,7 @@ Shader "PAV/URP/PicoNPR"
 {
     Properties
     {
+        [Enum(Pico.Avatar.AvatarShaderType)] _ShaderType("ShaderType", Float) = 0
         // Specular vs Metallic workflow
         [HideInInspector] _WorkflowMode("WorkflowMode", Float) = 1.0
 
@@ -28,7 +29,14 @@ Shader "PAV/URP/PicoNPR"
         _Metallic("Metallic", Range(1.0, 1.0)) = 1.0
         _MetallicGlossMap("Metallic", 2D) = "black" {}
 
+        _SpecColor("Specular", Color) = (0.2, 0.2, 0.2)
+        _SpecGlossMap("Specular", 2D) = "white" {}
+
+        [ToggleOff] _SpecularHighlights("Specular Highlights", Float) = 1.0
         [ToggleOff] _EnvironmentReflections("Environment Reflections", Float) = 1.0
+
+        _SpecularAAScreenSpaceVariance("Specular AA Screen Space Variance", Range(0,1)) = 0.1
+        _SpecularAAThreshold("Specular AA Threshold", Range(0,1)) = 0.2
 
         _BaseColorAmplify("BaseColorAmplify", Float) = 0.8
 
@@ -55,6 +63,16 @@ Shader "PAV/URP/PicoNPR"
         _LaserColorRamp("Laser ColorRamp", 2D) = "white" {}
 
         _MipBias("_MipBias", Float) = 0
+
+        _CustomVec_0("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_1("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_2("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_3("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_4("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_5("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_6("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_7("", Vector) = (0.0, 0.0, 0.0, 0.0)
+        _CustomVec_8("", Vector) = (0.0, 0.0, 0.0, 0.0)
 
         // SRP batching compatibility for Clear Coat (Not used in Lit)
         [HideInInspector] _ClearCoatMask("_ClearCoatMask", Float) = 0.0
@@ -159,6 +177,9 @@ Shader "PAV/URP/PicoNPR"
             // GPU Instancing
             //#pragma multi_compile_instancing
             //#pragma multi_compile _ DOTS_INSTANCING_ON
+
+            // For static mesh batching
+            #pragma multi_compile _ _ENABLE_STATIC_MESH_BATCHING
 
             #pragma vertex LitPassVertexSimple
             #pragma fragment LitPassFragmentSimple

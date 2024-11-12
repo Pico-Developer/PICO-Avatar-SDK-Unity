@@ -247,7 +247,7 @@ namespace Pico
 			{
 				if (nativeHandle == System.IntPtr.Zero)
 				{
-					return NativeResult.InvalidObject;
+					return NativeResult.NullReferenceObject;
 				}
 
 				//

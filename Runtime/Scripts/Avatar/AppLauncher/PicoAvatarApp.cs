@@ -2,11 +2,10 @@
 using UnityEngine;
 using System.Runtime.InteropServices;
 using System.Collections;
-using System.Linq;
+using System.Collections.Generic;
 #if !NO_XR
 using Pico.Platform;
 #endif
-
 
 namespace Pico
 {
@@ -123,13 +122,13 @@ namespace Pico
 			/// </summary>
 			public AvatarFaceExpressionNetPlaybackSettings netFaceExpressionPlaybackSettings;
 
-			/// <summary>
-			/// LocalDebug module related Settings
-			/// </summary>
-#if !PAV_INTERN
+            /// <summary>
+            /// LocalDebug module related Settings
+            /// </summary>
+#if !PAV_INTERNAL_DEV
 			[HideInInspector]
-#endif 
-			public AvatarLocalDebugSettings localDebugSettings;
+#endif
+            public AvatarLocalDebugSettings localDebugSettings;
 
 			/// <summary>
 			/// Set the account system, normal use without setting
@@ -574,6 +573,7 @@ namespace Pico
 				                 && _avatarManager == null)
 				{
 					_avatarManager = new PicoAvatarManager();
+					Debug.Log("@@@@@@@@@@@@@@@@@@@@@@@@@serverType" + appSettings.serverType);
 					// Debug in Development Env.
 					bool thirdPackage = !System.IO.Directory.Exists(AvatarEnv.avatarPath);
 					if (AvatarEnv.avatarPackedPathFirst || thirdPackage)
@@ -614,6 +614,8 @@ namespace Pico
 					// Skip updation if invisible this frame.
 					_avatarManager.SetSkipUpdateWhenInvisibleThisFrame(this.optimizationSettings
 						.skipUpdateIfInvisibleThisFrame);
+					//for Android14
+					//_avatarManager.RequestAndroidPermission();
 				}
 			}
 
@@ -622,12 +624,16 @@ namespace Pico
 				return IsCnDevice() ? "cn": "sg";
 			}
 
-			internal bool IsCnDevice()
+			/// <summary>
+			/// true is CnDevice, otherwise not
+			/// </summary>
+			/// <returns></returns>
+			public bool IsCnDevice()
 			{
-#if  UNITY_EDITOR
-				return Utility.GetPCNation() == NationType.China;
-#elif NO_XR
-				return loginSettings.nationType.Equals("cn");
+#if  UNITY_EDITOR && !NO_XR
+				return Utility.IsCnDevice();
+#elif NO_XR || UNITY_STANDALONE_LINUX
+				return loginSettings.nationType.Equals("cn") || loginSettings.nationType.Equals("cn-test");
 #else
 				return ApplicationService.GetSystemInfo().IsCnDevice;
 #endif
@@ -635,11 +641,37 @@ namespace Pico
 			
 			internal int CompareVersion(string version1, string version2)
 			{
-			    int[] v1 = version1.Split('.').Select(int.Parse).ToArray();
-				int[] v2 = version2.Split('.').Select(int.Parse).ToArray();
+				string[] vs1 = version1.Split('.');
+				List<int> v1 = new List<int>();
+				foreach (var value in vs1)
+				{
+					if (int.TryParse(value, out int ivalue))
+					{
+						v1.Add(ivalue);
+					}
+					else
+					{
+						return -1;
+					}
+				}
+				string[] vs2 = version2.Split('.');
+				List<int> v2 = new List<int>();
+				foreach (var value in vs2)
+				{
+					if (int.TryParse(value, out int ivalue))
+					{
+						v2.Add(ivalue);
+					}
+					else
+					{
+						return -1;
+					}
+				}
+			    /*int[] v1 = version1.Split('.').Select(int.TryParse()).ToArray();
+				int[] v2 = version2.Split('.').Select(int.TryParse()).ToArray();*/
 
 				int compareResult = 0;
-				int minLength = Math.Min(v1.Length, v2.Length);
+				int minLength = Math.Min(v1.Count, v2.Count);
 
 				for (int i = 0; i < minLength; i++)
 				{
@@ -651,9 +683,9 @@ namespace Pico
 					}
 				}
 
-				if (compareResult == 0 && v1.Length != v2.Length)
+				if (compareResult == 0 && v1.Count != v2.Count)
 				{
-					compareResult = v1.Length > v2.Length ? 1 : -1;
+					compareResult = v1.Count > v2.Count ? 1 : -1;
 				}
 				return compareResult; 
 			}
@@ -681,12 +713,22 @@ namespace Pico
 				
 				string ROMVersion = ApplicationService.GetSystemInfo().ROMVersion;
 				string MatrixVersionName = ApplicationService.GetSystemInfo().MatrixVersionName;
-				long MatrixVersionCode = ApplicationService.GetSystemInfo().MatrixVersionCode;
+				// long MatrixVersionCode = ApplicationService.GetSystemInfo().MatrixVersionCode;
+
+				if(String.IsNullOrEmpty(ROMVersion) || String.IsNullOrEmpty(MatrixVersionName))
+				{
+					string errorMessage = "pav: PicoAvatarSdk Starting. Unknown Rom Version.";
+					UnityEngine.Debug.Log(errorMessage);
+						
+					//popup
+					DllLoaderHelper.HandleLackMethod(errorMessage, true);
+					return false;
+				}
+
 				UnityEngine.Debug.Log(string.Format(
-						"pav: PicoAvatarSdk Starting. ROMVersion:{0}  MatrixVersionName:{1}  MatrixVersionCode:{2}",
+						"pav: PicoAvatarSdk Starting. ROMVersion:{0}  MatrixVersionName:{1}",
 						ROMVersion,
-						MatrixVersionName,
-						MatrixVersionCode.ToString()));
+						MatrixVersionName));
 
 				//check ROM
 				{
@@ -972,6 +1014,8 @@ namespace Pico
 					AvatarAppConfig config = new AvatarAppConfig();
 					config.version = 0;
 					config.avatarPath = AvatarEnv.avatarPath;
+
+					//Utility.desiredAvatarCacheDirectory = Application.persistentDataPath;
 
 					// use application cache first.
 					String avatarCachePath = AvatarEnv.avatarCachePath;

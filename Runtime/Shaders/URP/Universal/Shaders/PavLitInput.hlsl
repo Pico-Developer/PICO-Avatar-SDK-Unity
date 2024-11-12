@@ -4,12 +4,14 @@
 #include "../../PavConfig.hlsl"
 #include "../ShaderLibrary/Core.hlsl"
 #include "../../Core/ShaderLibrary/CommonMaterial.hlsl"
-#include "../ShaderLibrary/SurfaceInput.hlsl"
+
 #include "../../Core/ShaderLibrary/ParallaxMapping.hlsl"
 
 #if defined(_DETAIL_MULX2) || defined(_DETAIL_SCALED)
 #define _DETAIL
 #endif
+
+#define _USE_SPECULAR_AA
 
 /**
 _PARALLAXMAP  TEXTURE2D(_ParallaxMap);        SAMPLER(sampler_ParallaxMap);
@@ -48,6 +50,21 @@ half4 _ColorRegion1;
 half4 _ColorRegion2;
 half4 _ColorRegion3;
 half4 _ColorRegion4;
+
+half _SpecularAAScreenSpaceVariance;
+half _SpecularAAThreshold;
+
+float  _BaseColorAmplify;
+float4 _CustomVec_0;
+float4 _CustomVec_1;
+float4 _CustomVec_2;
+float4 _CustomVec_3;
+float4 _CustomVec_4;
+float4 _CustomVec_5;
+float4 _CustomVec_6;
+float4 _CustomVec_7;
+float4 _CustomVec_8;
+float  _MipBias;
 CBUFFER_END
 
 // NOTE: Do not ifdef the properties for dots instancing, but ifdef the actual usage.
@@ -77,6 +94,24 @@ UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
     UNITY_DOTS_INSTANCED_PROP(float4, _ColorRegion2)
     UNITY_DOTS_INSTANCED_PROP(float4, _ColorRegion3)
     UNITY_DOTS_INSTANCED_PROP(float4, _ColorRegion4)
+    UNITY_DOTS_INSTANCED_PROP(float, _SpecularAAScreenSpaceVariance)
+    UNITY_DOTS_INSTANCED_PROP(float, _SpecularAAThreshold)
+    UNITY_DOTS_INSTANCED_PROP(float, _BaseColorAmplify)
+    UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_0)
+    UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_1)
+    UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_2)
+    UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_3)
+    UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_4)
+    UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_5)
+    UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_6)
+    UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_7)
+    UNITY_DOTS_INSTANCED_PROP(float4, _CustomVec_8)
+    UNITY_DOTS_INSTANCED_PROP(float, _MipBias)
+    
+
+
+    
+    
 UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
 
 #define _BaseColor              UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4 , Metadata__BaseColor)
@@ -101,7 +136,23 @@ UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
 #define _ColorRegion2           UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4 , Metadata__ColorRegion2)
 #define _ColorRegion3           UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4 , Metadata__ColorRegion3)
 #define _ColorRegion4           UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4 , Metadata__ColorRegion4)
+#define _SpecularAAScreenSpaceVariance           UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float , Metadata__ColorRegion4)
+#define _SpecularAAThreshold           UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float , Metadata__ColorRegion4)
+
+#define _BaseColorAmplify UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float, Metadata__BaseColorAmplify)
+#define _CustomVec_0 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_0)
+#define _CustomVec_1 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_1)
+#define _CustomVec_2 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_2)
+#define _CustomVec_3 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_3)
+#define _CustomVec_4 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_4)
+#define _CustomVec_5 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_5)
+#define _CustomVec_6 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_6)
+#define _CustomVec_7 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_7)
+#define _CustomVec_8 UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float4, Metadata__CustomVec_8)
+#define _MipBias UNITY_ACCESS_DOTS_INSTANCED_PROP_FROM_MACRO(float, Metadata__MipBias)
 #endif
+
+#include "../ShaderLibrary/SurfaceInput.hlsl"
 
 TEXTURE2D(_ParallaxMap);        SAMPLER(sampler_ParallaxMap);
 //TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
@@ -123,6 +174,9 @@ TEXTURE2D(_ClearCoatMap);       SAMPLER(sampler_ClearCoatMap);
 #define PAV_APPLY_DETAIL_NORMAL(detailUv, normalTS, detailMask) ApplyDetailNormal(detailUv, normalTS, detailMask)
 #define PAV_SAMPLE_CLEAR_COAT(uv) SampleClearCoat(uv)
 #define PAV_INIT_SURFACE_DATA(uv, outSurfaceData) InitializeStandardLitSurfaceData(uv, outSurfaceData)
+
+
+
 
 half4 SampleMetallicSpecGloss(float2 uv, half albedoAlpha)
 {
@@ -263,6 +317,7 @@ inline void InitializeStandardLitSurfaceData(float3 uv3, out SurfaceData outSurf
     float2 uv = uv3.xy;
     half4 albedoAlpha = PAV_SAMPLE_ALBEDO_ALPHA(uv);
     half4 albedoMaskAlpha = PAV_SAMPLE_COLOR_REGIONS(uv);
+    half4 specGloss = PAV_SAMPLE_METALLIC_SPEC_GLOSS(uv, albedoAlpha.a);
 
     PAV_GET_CUTOFF(cutoff);
     PAV_GET_METALLIC(metallic);
@@ -278,7 +333,6 @@ inline void InitializeStandardLitSurfaceData(float3 uv3, out SurfaceData outSurf
 
     outSurfaceData.alpha = Alpha(albedoAlpha.a, baseColor, cutoff);
 
-    half4 specGloss = PAV_SAMPLE_METALLIC_SPEC_GLOSS(uv, albedoAlpha.a);
     //outSurfaceData.albedo = ApplyAlbedo(albedoAlpha.rgb, baseColor.rgb, shaderType);
 
     uint shaderTypeI = (uint) round(shaderType);
@@ -303,15 +357,16 @@ inline void InitializeStandardLitSurfaceData(float3 uv3, out SurfaceData outSurf
 #endif
 
     outSurfaceData.smoothness = specGloss.a;
+
     outSurfaceData.normalTS = PAV_SAMPLE_NORMAL(uv, bumpScale);
     outSurfaceData.occlusion = PAV_SAMPLE_OCCLUSION(uv);
     outSurfaceData.emission = PAV_SAMPLE_EMISSION(uv, emissionColor.rgb);
 
 #ifdef PAV_ToonShadowMap
     outSurfaceData.toonShadow = PAV_SAMPLE_TOON_SHADOW(uv);
- #endif
+#endif
 
-#if defined(_CLEARCOAT) || defined(_CLEARCOATMAP)
+#if (defined(_CLEARCOAT) || defined(_CLEARCOATMAP)) && !defined(_ENABLE_STATIC_MESH_BATCHING)
     half2 clearCoat = PAV_SAMPLE_CLEAR_COAT(uv);
     outSurfaceData.clearCoatMask       = clearCoat.r;
     outSurfaceData.clearCoatSmoothness = clearCoat.g;
@@ -320,7 +375,7 @@ inline void InitializeStandardLitSurfaceData(float3 uv3, out SurfaceData outSurf
     outSurfaceData.clearCoatSmoothness = 0.0h;
 #endif
 
-#if defined(_DETAIL)
+#if defined(_DETAIL) && !defined(_ENABLE_STATIC_MESH_BATCHING)
     half detailMask = SAMPLE_TEXTURE2D(_DetailMask, sampler_DetailMask, uv).a;
     float2 detailUv = uv * _DetailAlbedoMap_ST.xy + _DetailAlbedoMap_ST.zw;
     outSurfaceData.albedo = PAV_APPLY_DETAIL_ALBEDO(detailUv, outSurfaceData.albedo, detailMask);

@@ -820,7 +820,7 @@ half4 UniversalFragmentPBR(InputData inputData, SurfaceData surfaceData)
 #elif defined(PAV_LIT_TOON)
     
     BRDFData brdfData;
-    
+
     // NOTE: can modify alpha
     InitializeBRDFData(surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.alpha, brdfData);
 
@@ -877,9 +877,12 @@ half4 UniversalFragmentPBR(InputData inputData, SurfaceData surfaceData)
         bool specularHighlightsOff = false;
     #endif
     
-        BRDFData brdfData;
-    
+        BRDFData brdfData;        
         // NOTE: can modify alpha
+
+#ifdef _USE_SPECULAR_AA
+        surfaceData.smoothness = GeometricNormalFiltering(surfaceData.smoothness, inputData.normalWS, _SpecularAAScreenSpaceVariance, _SpecularAAThreshold);
+#endif
         InitializeBRDFData(surfaceData.albedo, surfaceData.metallic, surfaceData.specular, surfaceData.smoothness, surfaceData.alpha, brdfData);
     
         BRDFData brdfDataClearCoat = (BRDFData)0;

@@ -110,6 +110,10 @@ namespace Pico
             private float _toAdjustHeight = 0f;  // use for adjusting the feet of Avatar to fit to the ground
             private float _tPoseEyeHeight = 0f;  // record the eye height in T-pose.
             private bool _isFirstFrame = true;
+
+            private ErrorLogger _headDataLogger = new ErrorLogger();
+            private ErrorLogger _controllerDataLogger = new ErrorLogger();
+            private ErrorLogger _controllerStatusLogger = new ErrorLogger();
             #endregion
 
             #region Public Methods
@@ -129,7 +133,8 @@ namespace Pico
 
                 base.Initialize(nativeHandler_, owner);
 
-                _tPoseEyeHeight = _owner.bodyAnimController.GetEyeXForm().position.y;
+                const float kEyeHeightOffset = 0.012f;
+                _tPoseEyeHeight = _owner.bodyAnimController.GetEyeXForm().position.y + kEyeHeightOffset;
             }
 
             internal override void UpdateButtonStatus()
@@ -149,7 +154,7 @@ namespace Pico
                 int ret = PT_GetControllerStatus(ref _leftStatus, ref _rightStatus);
                 if (ret != 0)
                 {
-                    Debug.LogError($"PT_GetControllerStatus error code is {ret}");
+                    _controllerStatusLogger.LogErrorWithInterval($"PT_GetControllerStatus error code is {ret}");
                     return;
                 }
 
@@ -159,19 +164,21 @@ namespace Pico
 
             internal override void UpdateDevicePose()
             {
+                if (_owner == null || _owner.bodyAnimController == null) return;
+                
                 base.UpdateDevicePose();
 
                 int ret = PT_GetHeadTrackingData(ref _headData);
                 if (ret != 0)
                 {
-                    Debug.LogError($"PT_GetHeadTrackingData error code is {ret}");
+                    _headDataLogger.LogErrorWithInterval($"PT_GetHeadTrackingData error code is {ret}");
                     return;
                 }
 
                 ret = PT_GetControllerData(ref _gLeftData, ref _gRightData, ref _leftData, ref _rightData);
                 if (ret != 0)
                 {
-                    Debug.LogError($"PT_GetControllerData error code is {ret}");
+                    _controllerDataLogger.LogErrorWithInterval($"PT_GetControllerData error code is {ret}");
                     return;
                 }
 
@@ -259,6 +266,8 @@ namespace Pico
 
                 _headData.x = 0;
                 _headData.z = 0;
+
+                _owner.bodyAnimController.needUpdateEntityUnityXFormFromNative = false;
             }
 
             // Fix the Avatar's feet on the ground.

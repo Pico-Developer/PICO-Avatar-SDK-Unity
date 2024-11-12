@@ -228,7 +228,7 @@ namespace Pico
 			/// Add state of this layer status change event callback
 			/// </summary>
 			/// <param name="stateStatus">The status to registe event</param>
-			/// <param name="stateCallBack">Callback function</param>
+			/// <param name="callback">Callback function</param>
 			public void AddStateChangedCallBack(AnimStateStatus stateStatus,
 				System.Action<AvatarAnimationLayer, AvatarAnimationState, AvatarAnimationState> callback)
 			{

@@ -22,11 +22,13 @@ public class AutoSettings : MonoBehaviour
                 "Disagree")) return;
         GraphicsSettings.renderPipelineAsset =
             AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>("Packages/org.byted.avatar.sdk/Runtime/Settings/PipelineSettings/URP/UniversalRP-ForwardRenderer-LowQuality.asset");
-          
+        
+        QualitySettings.renderPipeline = GraphicsSettings.renderPipelineAsset;
         PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.IL2CPP);
         PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.Android, false);
         PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, new [] { GraphicsDeviceType.OpenGLES3 });
             
+        PlayerSettings.SetNormalMapEncoding(BuildTargetGroup.Android,NormalMapEncoding.XYZ);
         PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
         PlayerSettings.Android.forceSDCardPermission = true;
         PlayerSettings.openGLRequireES31 = true;

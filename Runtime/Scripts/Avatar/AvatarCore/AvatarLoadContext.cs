@@ -36,12 +36,13 @@ namespace Pico
 			}
 
 			/// <summary>
-			/// AvatarLoadContext construction by specifying parameters
+			/// AvatarLoadContext construction by specifying parameters.It will be deleted soon
 			/// </summary>
 			/// <param name="userId_">Avatar is unique ID , if the backpack image is used, the openid obtained by the platform </param>
 			/// <param name="avatarId_">The backpack image id specified under the current userId , the default "" is the current image of the backpack</param>
 			/// <param name="jsonConfig_">Specify the image json configuration, the priority is greater than userId and avatarId</param>
 			/// <param name="capabilities_">Set up image IK and other capacity configuration</param>
+			[Obsolete]
 			public AvatarLoadContext(string userId_, string avatarId_, string jsonConfig_,
 				AvatarCapabilities capabilities_ = null)
 			{
@@ -66,12 +67,14 @@ namespace Pico
 
 			/// <summary>
 			/// AvatarLoadContext is created through json configuration, this method is a wrapper of the constructor method
+			/// It will be deleted soon
 			/// </summary>
 			/// <param name="userId_">Avatar is unique ID , if the backpack image is used, the openid obtained by the platform</param>
 			/// <param name="jsonConfig_">Specify the image json configuration, the priority is greater than userId and avatarId</param>
 			/// <param name="capabilities_">Set up image IK and other capacity configuration</param>
 			/// <returns>AvatarLoadContext</returns>
 			/// <exception cref="ArgumentNullException">jsonConfig_ can not be empty</exception>
+			[Obsolete]
 			public static AvatarLoadContext CreateByJsonConfig(string userId_, string jsonConfig_,
 				AvatarCapabilities capabilities_ = null)
 			{
@@ -107,7 +110,7 @@ namespace Pico
 				string capabilitiesData = capabilities.ToJson();
 				//
 				if (!string.IsNullOrEmpty(jsonConfig))
-				{
+				{//It will be deleted soon, do not use this branch
 					Pico.Avatar.LoadAvatarWithJsonSpecRequest.DoRequest(userId, jsonConfig,
 						capabilitiesData);
 				}

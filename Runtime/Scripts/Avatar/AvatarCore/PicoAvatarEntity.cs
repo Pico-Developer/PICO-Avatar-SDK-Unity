@@ -469,7 +469,50 @@ namespace Pico
 				}
 			}
 
-			#endregion
+			public bool GetActiveLodBounds(out Bounds bounds, bool isInitial = true, bool isConservative = true)
+            {
+				if (this._activeLod != null)
+                {
+					bounds = isInitial ? (isConservative ? this._activeLod.firstSuggestedBounds : this._activeLod.firstRawBounds) : (isConservative ? this._activeLod.suggestedBounds : this._activeLod.rawBounds);
+					return true;
+				}
+				else
+                {
+					bounds = new Bounds();
+					return false;
+				}
+            }
+
+            public bool RecalculateActiveLodBounds(bool needUpdateRenderer = false)
+            {
+                if (this._activeLod != null)
+                {
+					this._activeLod.AccumulateBounds(needUpdateRenderer);
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+#if PAV_INTERNAL_DEV
+			public void ShowBoundsCube(bool value)
+            {
+				if (this._activeLod && this._activeLod.boundsCube)
+					this._activeLod.boundsCube.SetActive(value);
+            }
+
+			public void UpdateBoundsCube(bool isInitial, bool isConservative)
+            {
+				if (this._activeLod && this._activeLod.boundsCube && GetActiveLodBounds(out Bounds bounds, isInitial, isConservative))
+                {
+					this._activeLod.UpdateBoundsCube(bounds);
+				}
+			}
+#endif
+
+#endregion
 
 
 			#region Public Skeleton Record/Playback
@@ -870,12 +913,12 @@ namespace Pico
 				//
 				_statsStartLoadTime = AvatarEnv.realtimeSinceStartup;
 
-				// Scale to zero before animation updated.
-				if (owner.capabilities.controlSourceType == ControlSourceType.OtherPlayer)
-				{
-					this.transform.localScale = Vector3.zero;
-				}
-			}
+                // Scale to zero before animation updated.
+                if (owner.capabilities.controlSourceType == ControlSourceType.OtherPlayer)
+                {
+                    this.transform.localScale = Vector3.zero;
+                }
+            }
 
 			/// <summary>
 			/// On Lod Changed
@@ -1246,15 +1289,16 @@ namespace Pico
 					{
 						var placeHolderAvatar = owner as PicoPlaceholderAvatar;
 						// If nobody reference the source placeholder, skip update.
-						if (placeHolderAvatar != null && !placeHolderAvatar.isReferenced)
+						if (placeHolderAvatar != null && !placeHolderAvatar.isReferenced && !owner.isAvatarLodDirty)
 						{
 							return false;
 						}
 					}
 					else // If (!isMainAvatar)
 					{
+						// force update if lod dirty
 						if (avatarApp.optimizationSettings.skipUpdateIfInvisibleThisFrame && !_inCameraFrustum &&
-						    !owner.forceUpdateSkeleton && !owner.forceUpdateSkeletonFromNative)
+						    !owner.forceUpdateSkeleton && !owner.isAvatarLodDirty)
 						{
 							// if invisible, we MUST at least update native avatar once each 0.1 seconds.
 							if (Time.time - _lastSkipInvisibleUpdateTime < 0.2f)
@@ -1293,7 +1337,8 @@ namespace Pico
 						}
 
 						// Skip update even visible if too far.
-						if (avatarApp.optimizationSettings.skipUpdateEvenVisibleDistance > 0 && !owner.forceUpdateSkeletonFromNative)
+						// force update if lod dirty
+						if (avatarApp.optimizationSettings.skipUpdateEvenVisibleDistance > 0 && !owner.isAvatarLodDirty)
 						{
 							if (sqrtDist > avatarApp.squaredSkipUpdateEvenVisibleDistance &&
 							    Time.time - _lastSkipVisibleUpdateTime <
@@ -1315,13 +1360,14 @@ namespace Pico
 					// If avatar bunch item attached, no need to update simulation render data！
 					if (_avatarBunchItem != null && !owner.forceUpdateSkeleton)
 					{
+						// reset avatar lod dirty flag
+						owner.isAvatarLodDirty = false;
 						return false;
 					}
 
 					// Need update simulation render data.
 					return true;
 				}
-
 				return false;
 			}
 
@@ -1347,7 +1393,7 @@ namespace Pico
 					UpdateCustomHandPose();
 				}
 			}
-
+					
 			/// <summary>
 			/// Job to pre-update render data. currently bone matrices updated from native part
 			/// </summary>

@@ -74,7 +74,8 @@ namespace Pico
 				, ((uint)NativeCallFlags.Async | (uint)NativeCallFlags.NeedReturn | (uint)NativeCallFlags.NotReuse));
 		}
 
-		// Request for load avatar with json.    
+		// Request for load avatar with json. It will be deleted soon
+		[Obsolete]
 		public class LoadAvatarWithJsonSpecRequest : AsyncRequestBase
 		{
 			public static void DoRequest(string userId, string jsonSpecdata, string capabilities)
@@ -187,7 +188,7 @@ namespace Pico
 					//
 					if (callback != null)
 					{
-						callback((int)errorCode, int.Parse(type));
+						callback((int)errorCode, int.TryParse(type, out var res) ? res : 0);
 					}
 				});
 			}

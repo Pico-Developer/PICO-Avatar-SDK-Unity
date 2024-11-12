@@ -32,6 +32,7 @@ namespace Pico
 				AvatarEnity = 0,
 				AvatarLod,
 				AvatarRenderMesh,
+				AvatarTexture,
 				Num,
 			}
 

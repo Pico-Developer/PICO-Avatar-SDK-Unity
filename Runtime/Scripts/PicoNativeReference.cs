@@ -226,11 +226,9 @@ namespace Pico
 			{
 				if (nativeObjectPtr != System.IntPtr.Zero)
 				{
-					var tmp = nativeObjectPtr;
-					//
+					pav_Object_Release(nativeObjectPtr);
+					
 					nativeObjectPtr = System.IntPtr.Zero;
-					//
-					pav_Object_Release(tmp);
 				}
 			}
 

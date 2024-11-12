@@ -91,11 +91,12 @@ namespace Pico
 			#region Public Framework Methods
 
 			// Constructor invoked by AvatarLod.
-			internal AvatarPrimitive(System.IntPtr nativeHandle_, uint nodeId, AvatarLod owner_)
+			internal AvatarPrimitive(System.IntPtr nativeHandle_, uint nodeId, AvatarLod owner_, bool mergedToLod)
 			{
 				_nativeHandle = nativeHandle_;
 				_nodeId = nodeId;
 				_owner = owner_;
+				SetMergedByAvatarLod(mergedToLod);
 			}
 
 			~AvatarPrimitive()
@@ -202,13 +203,13 @@ namespace Pico
 				}
 
 				//
-				return _primitiveRenderMesh.BuildOfficialMaterialsFromNative(GetRenderMaterialHandles(), lodLevel, false);
+				return _primitiveRenderMesh.BuildOfficialMaterialsFromNative(GetRenderMaterialHandles(), lodLevel, _owner.owner.owner.capabilities.allowEdit, false);
 			}
             
             //Native handle for render material of the primitive.
             //@note Reference count has been added, invoker should release the reference count when DO NOT reference
             //the mesh object any more.
-            private System.IntPtr[] GetRenderMaterialHandles()
+            internal System.IntPtr[] GetRenderMaterialHandles()
 			{
 				System.IntPtr[] handles = null;
 				int materialCount = pav_AvatarPrimitive_GetRenderMaterialCount(_nativeHandle);
