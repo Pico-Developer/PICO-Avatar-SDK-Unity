@@ -14,10 +14,16 @@ namespace Pico.Avatar
 		/// Whether enable static mesh batching
 		/// </summary>
 		public bool enableStaticMeshBatching = false;
+
 		/// <summary>
 		/// Whether do garbage collection automatically
 		/// </summary>
 		public bool autoGarbageCollection;
+
+		/// <summary>
+		/// Whether enable gpu texture baking
+		/// </summary>
+		public bool enableGpuTextureBaking = true;
 
 		/// <summary>
 		/// Server type
@@ -91,7 +97,7 @@ namespace Pico.Avatar
 		/// <summary>
 		/// Version of minimum matrix version
 		/// </summary>
-		[NonSerialized] public string minMatrixVersion = "6.2.0";
+		[NonSerialized] public string minMatrixVersion = "6.3.1";
 	}
 
 	/// <summary>

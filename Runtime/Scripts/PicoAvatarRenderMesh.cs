@@ -1141,18 +1141,19 @@ namespace Pico
 				// set official Material first.
 				if (officialMaterials != null)
 				{
-					if (!_Primitive.owner.owner.owner.capabilities.allowEdit)
+					if (PicoAvatarApp.instance.appSettings.enableGpuTextureBaking && !_Primitive.owner.owner.owner.capabilities.allowEdit)
 					{
-						for (int i = 0; i < officialRenderMaterials.Length; ++i)
-						{
-							var renderMaterial = officialRenderMaterials[i]; 
-							var runtimeMaterial = officialMaterials[i];
-							if (!renderMaterial.mat_shaderColorRegionBaked)
-							{
-								OfficialMaterialBakeColorRegionOnGPUAndAsyncReadback(runtimeMaterial);
-							}
-						}
+                        for (int i = 0; i < officialRenderMaterials.Length; ++i)
+                        {
+                            var renderMaterial = officialRenderMaterials[i]; 
+                            var runtimeMaterial = officialMaterials[i];
+                            if (!renderMaterial.mat_shaderColorRegionBaked)
+                            {
+                                OfficialMaterialBakeColorRegionOnGPUAndAsyncReadback(runtimeMaterial);
+                            }
+                        }
 					}
+					
 					if (skinMeshRenderer)
 					{
 						skinMeshRenderer.sharedMaterials = officialMaterials;

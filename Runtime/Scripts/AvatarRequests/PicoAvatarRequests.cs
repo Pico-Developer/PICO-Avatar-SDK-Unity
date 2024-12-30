@@ -305,5 +305,32 @@ namespace Pico
 				"RequestAvatarListInCharacter"
 				, ((uint)NativeCallFlags.Async | (uint)NativeCallFlags.NeedReturn | (uint)NativeCallFlags.NotReuse));
 		}
-	}
+
+        public class EnableGpuTextureBaking : AsyncRequestBase
+        {
+            public static void DoRequest(bool state, System.Action responsed = null)
+            {
+                var req = new EnableGpuTextureBaking();
+                var args = req.invokeArgumentTable;
+                args.SetBoolParam(0, state);
+                req.DoApply((IDParameterTable returnParams, NativeCaller invoker) =>
+                {
+					bool value = true;
+                    returnParams.GetBoolParam(0, ref value); 
+					AvatarEnv.Log(DebugLogMask.GeneralInfo, System.String.Format("Gpu texture baking state from js {0}", value));
+                    responsed?.Invoke();
+                });
+            }
+
+            //
+            private EnableGpuTextureBaking() : base(_Attribte)
+            {
+            }
+
+            // request invoker attribute.
+            private static NativeCallerAttribute _Attribte = new NativeCallerAttribute("AvatarRequest",
+                "EnableGpuTextureBaking"
+                , ((uint)NativeCallFlags.Async | (uint)NativeCallFlags.NeedReturn | (uint)NativeCallFlags.NotReuse));
+        }
+    }
 }

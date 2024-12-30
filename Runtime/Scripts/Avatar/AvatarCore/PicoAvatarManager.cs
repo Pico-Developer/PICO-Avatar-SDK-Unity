@@ -1476,7 +1476,7 @@ namespace Pico
 				}
 
 				//
-				UnityEngine.GameObject.Destroy(avatarBase.gameObject);
+				UnityEngine.GameObject.DestroyImmediate(avatarBase.gameObject);
 			}
 
 

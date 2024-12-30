@@ -369,6 +369,7 @@ namespace Pico
 								pav_AvatarApp_Update(_nativeHandle, _lastUpdateTime);
 								UnityEngine.Profiling.Profiler.EndSample();
 
+
 								if (PicoAvatarStats.instance != null)
 									PicoAvatarStats.instance.EmitFinish(PicoAvatarStats.StatsType.AvatarCoreUpdate);
 							}
@@ -721,7 +722,7 @@ namespace Pico
 					UnityEngine.Debug.Log(errorMessage);
 						
 					//popup
-					DllLoaderHelper.HandleLackMethod(errorMessage, true);
+					DllLoaderHelper.HandleLackMethod(string.Empty, true);
 					return false;
 				}
 
@@ -741,7 +742,7 @@ namespace Pico
 						UnityEngine.Debug.Log(errorMessage);
 						
 						//popup
-						DllLoaderHelper.HandleLackMethod(errorMessage, true);
+						DllLoaderHelper.HandleLackMethod(String.Empty, true);
 						return false;
 					}
 				}
@@ -759,7 +760,7 @@ namespace Pico
 						UnityEngine.Debug.Log(errorMessage);
 
 						//popup
-						DllLoaderHelper.HandleLackMethod(errorMessage, true);
+						DllLoaderHelper.HandleLackMethod(String.Empty, true);
 						return false;
 					}
 				}
@@ -783,10 +784,16 @@ namespace Pico
 				// Send notification that avatar manager is stopping, listener may need clear some object.
 				this.OnAvatarManagerInitialized?.Invoke(success);
 				//
-				if (success && !string.IsNullOrEmpty(localDebugSettings.debugConfigText))
+				if (success)
 				{
-					var unescapedJsonText = localDebugSettings.debugConfigText.Replace("\\\"", "\"");
-                    _rmiObject.SetDebugConfig(unescapedJsonText);
+					if (!string.IsNullOrEmpty(localDebugSettings.debugConfigText))
+					{
+                        var unescapedJsonText = localDebugSettings.debugConfigText.Replace("\\\"", "\"");
+                        _rmiObject.SetDebugConfig(unescapedJsonText);
+					}
+
+                    // Passing value to js
+                    EnableGpuTextureBaking.DoRequest(appSettings.enableGpuTextureBaking);
 				}
 			}
 
@@ -936,6 +943,12 @@ namespace Pico
 					// Initialize avatar env.
 					var result = AvatarEnv.Initialize(AppSettings.avatarSdkVersion, (uint)logSettings.debugLogMasks,
 						Path);
+
+#if !UNITY_2021_2_OR_NEWER
+                    UnityEngine.Debug.Log("Unity engine version is below 2021.2, Gpu texture baking is automatically disabled");
+                    appSettings.enableGpuTextureBaking = false;
+#endif
+
 					//
 					if (result != NativeResult.Success)
 					{
@@ -1351,7 +1364,7 @@ namespace Pico
 					// }
 				}
 			}
-			#endregion
+#endregion
 
 			#region Cache Frame Values
 

@@ -390,7 +390,10 @@ namespace Pico
 			public static bool CreateAndRefTexture(string cacheKey, Texture tex, uint texByteSize, out AvatarTexture avatarTex)
 			{
 				if (_textures.TryGetValue(cacheKey, out avatarTex))
+				{
+					avatarTex.Retain();
 					return true;
+				}
 				else
 				{
                     avatarTex = new AvatarTexture(cacheKey);

@@ -585,11 +585,7 @@ namespace Pico
 				{
 					if (_bodyTrackingData.bodyTrackingCalibrateState == 1) return true;
 
-#if BODY_TRACKING_V1
-                    PXR_Input.GetMotionTrackerCalibState(ref _bodyTrackingData.bodyTrackingCalibrateState);
-#else
-                    PXR_Input.GetFitnessBandCalibState(ref _bodyTrackingData.bodyTrackingCalibrateState);
-#endif
+					PXR_Input.GetMotionTrackerCalibState(ref _bodyTrackingData.bodyTrackingCalibrateState);
                     if (_bodyTrackingData.bodyTrackingCalibrateState == 1)
                     {
                         // after calibration
@@ -624,11 +620,7 @@ namespace Pico
             /// </param>
             public void SetSwiftMode(int swiftMode)
 			{
-#if BODY_TRACKING_V1
-                PXR_Input.SetBodyTrackingMode((BodyTrackingMode)swiftMode);
-#else
-                PXR_Input.SetSwiftMode(swiftMode);
-#endif
+				PXR_Input.SetBodyTrackingMode((BodyTrackingMode)swiftMode);
             }
 
             /// <summary>
@@ -638,11 +630,7 @@ namespace Pico
 			{
 				try
 				{
-#if BODY_TRACKING_V1
-                    PXR_MotionTracking.StartMotionTrackerCalibApp();
-#else
-                    PXR_Input.OpenFitnessBandCalibrationAPP();
-#endif
+					PXR_MotionTracking.StartMotionTrackerCalibApp();
                 }
                 catch (System.Exception ex)
 				{

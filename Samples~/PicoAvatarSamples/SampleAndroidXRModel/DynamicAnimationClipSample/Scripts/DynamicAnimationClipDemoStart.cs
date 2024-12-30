@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
+using UnityEditor;
 using UnityEngine;
 
 namespace Pico.Avatar.Sample
@@ -12,6 +14,7 @@ namespace Pico.Avatar.Sample
         private bool m_loginPlatformSDK = false;
         private ActionAvatar _actAvatar;
 
+        public TextAsset AnimList;
         private void Awake()
         {
             System.Action<bool> loginCall = (state) =>
@@ -19,7 +22,17 @@ namespace Pico.Avatar.Sample
                 m_loginPlatformSDK = state;
             };
             this.SvrPlatformLogin(loginCall);
-            string assetPath = (Application.dataPath + "/PicoAvatarSamples/SampleAndroidXRModel/DynamicAnimationClipSample");
+            string assetPath = string.Empty;
+            
+#if UNITY_EDITOR
+            if (AnimList != null)
+            {
+                assetPath = Application.dataPath.Replace("Assets", string.Empty) + AssetDatabase.GetAssetPath(AnimList).Replace("animaz/dev_animation_group_list.txt", string.Empty);
+            }
+#else
+                assetPath = (Application.dataPath + "/PicoAvatarSamples/SampleAndroidXRModel/DynamicAnimationClipSample");
+#endif
+                
             animationGroupAssets = new AnimationDecompressor("animaz", assetPath, "dev_animation_group_list.txt");
 
         }

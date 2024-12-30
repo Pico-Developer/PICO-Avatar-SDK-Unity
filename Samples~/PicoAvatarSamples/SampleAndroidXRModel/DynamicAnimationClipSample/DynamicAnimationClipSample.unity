@@ -902,6 +902,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12fc6363491d241f285eaad555ec91fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  AnimList: {fileID: 4900000, guid: be9858cd158d9410f98549e0ab8733f5, type: 3}
 --- !u!1001 &1228459643
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2574,20 +2575,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   appSettings:
-    localMode: 1
+    enableStaticMeshBatching: 0
     autoGarbageCollection: 1
     serverType: 1
     mainCamera: {fileID: 0}
     additiveGI: 0
     enabledFullscreenFeatures: 0
     localResourcePath: 
-  loginSettings:
-    userID: 
-    accessToken: 
   logSettings:
     debugLogMasks: -1
     enableLogTime: 1
   renderSettings:
+    useCustomMaterial: 0
+    customMaterialDatabase: {fileID: 0}
     disablePrimitiveMerge: 0
     forceDisableCastShadow: 0
     forceDisableReceiveShadow: 0
@@ -2647,7 +2647,6 @@ MonoBehaviour:
     enableStats: 0
     enableSystemInfo: 0
     traceNativeCaller: 0
-  accessType: 1
 --- !u!1 &2345975865757593166
 GameObject:
   m_ObjectHideFlags: 0
