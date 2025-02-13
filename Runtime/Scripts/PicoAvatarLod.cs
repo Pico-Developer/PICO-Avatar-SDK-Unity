@@ -123,6 +123,8 @@ namespace Pico
 
 			// merged render material
 			private PicoAvatarMergedRenderMaterial _mergedRenderMaterial;
+			
+			private Coroutine _buildPrimitiveCoroutine = null;
 
 			public PicoAvatarMergedRenderMaterial mergedRenderMaterial { get => _mergedRenderMaterial; }
 
@@ -175,7 +177,7 @@ namespace Pico
 				// Currently if avatar bunch need, should not load self data.
 				if ((int)owner.owner.capabilities.avatarBunchLodLevel < 0)
 				{
-					PicoAvatarApp.instance.StartCoroutine(Coroutine_BuildPrimitives());
+					_buildPrimitiveCoroutine = PicoAvatarApp.instance.StartCoroutine(Coroutine_BuildPrimitives());
 				}
 				else
 				{
@@ -648,6 +650,11 @@ namespace Pico
 			// Definitely destroy the object.
 			internal void Destroy()
 			{
+				if (_buildPrimitiveCoroutine != null)
+				{
+					PicoAvatarApp.instance.StopCoroutine(_buildPrimitiveCoroutine);	
+				}
+				
 				//
 				if (PicoAvatarStats.instance != null && _stage != Stage.Destroyed)
 				{
