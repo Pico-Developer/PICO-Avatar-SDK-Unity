@@ -918,19 +918,19 @@ namespace Pico
 
 #if UNITY_EDITOR
 			#region nation utility
-			[MenuItem("AvatarSDK/NationType/CN")]
+			[MenuItem("AvatarSDK/NationType/CN", false, 1)]
 			public static void SetChina()
 			{
 				PlayerPrefs.SetInt("NationSelect", (int)NationType.China);
 			}
 
-			[MenuItem("AvatarSDK/NationType/US")]
+			[MenuItem("AvatarSDK/NationType/US", false, 2)]
 			public static void SetUS()
 			{
 				PlayerPrefs.SetInt("NationSelect", (int)NationType.US);
 			}
 
-			[MenuItem("AvatarSDK/NationType/Other")]
+			[MenuItem("AvatarSDK/NationType/Other", false, 3)]
 			public static void SetOverSea()
 			{
 				PlayerPrefs.SetInt("NationSelect", (int)NationType.Oversea);
