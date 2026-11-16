@@ -1,5 +1,5 @@
 ﻿using System;
-using Pico.Platform;
+using ByteDance.PICO.Platform.Service;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -195,7 +195,7 @@ namespace Pico.Avatar.Sample
 #if UNITY_EDITOR
                 if (Utility.IsCnDevice())
 #elif UNITY_ANDROID
-                if (ApplicationService.GetSystemInfo().IsCnDevice)
+                if (ByteDance.PICO.Platform.Service.ApplicationService.GetSystemInfo().IsCnDevice)
 #endif
                 {
                     capability.handAssetId = "1550582586916995072";

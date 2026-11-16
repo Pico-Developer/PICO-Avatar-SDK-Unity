@@ -10,7 +10,6 @@ using UnityEngine.Rendering;
 
 public class PicoAvatarSDKHelperWindow : EditorWindow
 {
-    private Button docBtn;
     private Button faqBtn;
     private Button oncallBtn;
 
@@ -18,8 +17,6 @@ public class PicoAvatarSDKHelperWindow : EditorWindow
     private VisualElement oncallPanelClose;
     private VisualElement copyBtn;
     
-    private const string DocsUrl_CN = "https://developer-cn.picoxr.com/document/unity-avatar/";
-    private const string DocsUrl_OVERSEA = "https://developer.picoxr.com/document/unity-avatar/";
     [MenuItem("AvatarSDK/Show Helper", false, 2)]
     public static void ShowExample()
     {
@@ -53,35 +50,19 @@ public class PicoAvatarSDKHelperWindow : EditorWindow
         view.style.height = Length.Percent(100);
         view.style.width = Length.Percent(100);
 
-        docBtn = view.Q<Button>("docBtn");
         //faqBtn = view.Q<Button>("faqBtn");
         oncallBtn = view.Q<Button>("oncallBtn");
         copyBtn = view.Q<Button>("CopyBtn");
         oncallPanel = view.Q("OncallPanel");
         oncallPanelClose = view.Q("OncallPanelClose");
         
-        docBtn.RegisterCallback<ClickEvent>(OnDocBtnClick);
         //faqBtn.RegisterCallback<ClickEvent>(OnFAQBtnClick);
         oncallBtn.RegisterCallback<ClickEvent>(OnOnCallBtnClick);
         copyBtn.RegisterCallback<ClickEvent>(OnCopyBtnClick);
         oncallPanelClose.RegisterCallback<ClickEvent>(OnOnCallPanelClick);
-        AddVisualElementHoverMask(docBtn);
         //AddVisualElementHoverMask(faqBtn);
         AddVisualElementHoverMask(oncallBtn);
         AddVisualElementHoverMask(copyBtn);
-    }
-
-    private void OnDocBtnClick(ClickEvent evt)
-    {
-        if (Utility.IsCnDevice())
-        {
-            Application.OpenURL(DocsUrl_CN);
-        }
-        else
-        {
-            Application.OpenURL(DocsUrl_OVERSEA);
-        }
-      
     }
 
     private void OnFAQBtnClick(ClickEvent evt)

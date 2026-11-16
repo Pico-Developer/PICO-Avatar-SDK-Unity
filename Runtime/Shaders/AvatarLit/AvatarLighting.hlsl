@@ -23,7 +23,7 @@ out BSDFData outBSDFData)
 }
 
 //From https://blog.selfshadow.com/publications/s2013-shading-course/lazarov/s2013_pbs_black_ops_2_notes.pdf
-//这个看起来会好一点
+// This approximation produces better visual results.
 half3 EnvironmentBRDF(half g,half NoV,half3 fresnel)
 {
     half4 t =  half4(1 / 0.96, 0.475, (0.0275 - 0.25 * 0.04) / 0.96, 0.25);
@@ -92,12 +92,12 @@ half3 LightingPhysicallyBased(half3 viewDir,half3 normalWS,
 
     half3 cosWeight = clampedNoL.xxx;
     
-    //----计算BRDF----
+    // Compute BRDF.
     half3 radiance = cosWeight  * light.color * light.distanceAttenuation * light.shadowAttenuation;
-    //漫反射
+    // Diffuse reflection.
     half diffuseTerm = LambertNoPI();
 
-    //镜面反射
+    // Specular reflection.
     half3 specularTerm;
     
     #ifndef  _SPECULARHIGHLIGHTS_OFF
@@ -147,11 +147,11 @@ half4 AvatarFullPBR(InputData inputData, SurfaceData surfaceData, float3 positio
     half NoV = dot(N,V);
     half clampedNoV = max(NoV,0.0001);
     //half NoL = dot(N,mainLight.direction);
-    //获取物体的bsdf信息。
+    // Get the object's BSDF data.
     BSDFData bsdfData;
     InitializeBSDFData(surfaceData.albedo,surfaceData.metallic,surfaceData.smoothness ,clampedNoV,V,bsdfData);
     
-    //计算间接光
+    // Compute indirect lighting.
     half3 giColor = ComputeGI(bsdfData,inputData.bakedGI,surfaceData.occlusion,surfaceData.smoothness,inputData.positionWS,positionVS,N, V);
     half3 directLightColor = LightingPhysicallyBased(V,N,NoV,clampedNoV,bsdfData,mainLight);
 
@@ -209,5 +209,4 @@ half4 AvatarSimplePBR(InputData inputData, SurfaceData surfaceData, float3 posit
     
     return DoPostProcessing(color,_Tonemapping);
 }
-
 

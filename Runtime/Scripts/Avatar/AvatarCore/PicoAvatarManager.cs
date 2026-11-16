@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 
 #if !NO_XR
-	using Pico.Platform;
+	using ByteDance.PICO.Platform.Service;
 #endif
 
 using Unity.Collections;
@@ -273,7 +273,13 @@ namespace Pico
 				}
 				return true;
 			}
-
+			
+			/// <summary>
+			///  If network or other issues prevent the normal loading of the Avatar, 
+			///  you can use the current API to load the local fallback avatar model.
+			/// </summary>
+			/// <param name="AvatarLoadContext">Avatar load context</param>
+			/// <returns>Return null if load avatar failed for bad parameters! </returns>
 			public PicoAvatar LoadFallbackLocalAvatar(AvatarLoadContext loadContext) 
 			{
 				bCheckFlag = CheckAndInstallFallbackAvatarResources();
@@ -704,36 +710,32 @@ namespace Pico
 #if !NO_XR
 				VerifyAppModeRequest.DoRequest(CoreService.GetAppID(), (errorCode, type) =>
 				{
-					if (errorCode != 0 || type == 3 || PicoAvatarApp.instance == null) //private mode do nothing
+					if (errorCode != 0 || type == 3 || PicoAvatarApp.instance == null)
 					{
-						callback(false);
+						callback?.Invoke(false);
 						return;
 					}
-
-				
 					PicoAvatarApp.instance.appMode = type == 2 ? AppModeType.Single : AppModeType.Public;
+					bool launched = false;
 #if UNITY_ANDROID && !UNITY_EDITOR
 					try
 					{
 						SetAvatarEditorJavaObject();
 						var context = _unityPlayerJavaClass.GetStatic<AndroidJavaObject>("currentActivity");
-						_avatarEditorJavaObject.Call<bool>("startAvatarEditor", context, packageName, "near", type);
-						callback(true);
-						Debug.Log("start avatar editor succeed!");
-						return;
+						launched = _avatarEditorJavaObject.Call<bool>("startAvatarEditor", context, packageName, "near", type);
 					}
 					catch (System.Exception ex)
 					{
-						Debug.Log(ex.ToString());
-						Debug.Log("start avatar editor failure!");
-						callback(false);
+						Debug.LogException(ex);
 					}
 #else
-					UnityEngine.Debug.LogError("StartAvatarEditor DOES NOT WORK in current platform!");
+					Debug.LogWarning("StartAvatarEditor requires an Android player.");
 #endif
-					Debug.Log("start avatar editor failure!");
-					callback(false);
+					// Dispatch success is distinct from the editor-opened state notification (0).
+					callback?.Invoke(launched);
 				});
+#else
+				callback?.Invoke(false);
 #endif
 			}
 
@@ -1136,7 +1138,7 @@ namespace Pico
 					if (string.IsNullOrEmpty(configString))
 					{
 #if !NO_XR
-						string appId = Pico.Platform.CoreService.GetAppID();
+						string appId = ByteDance.PICO.Platform.Service.CoreService.GetAppID();
 						AppConfigData configData = new AppConfigData();
 						configData.PicoDevelopAppId = appId;
 						configString = JsonUtility.ToJson(configData);
@@ -1494,7 +1496,7 @@ namespace Pico
 				{
 					if (errorCode == 0)
 					{
-						//这里是加载资产完成的回调
+						// Callback invoked after asset loading completes.
 						OnAvatarSpecificationUpdated?.Invoke(avatarBase, (int)errorCode, msg);
 					}
 					else

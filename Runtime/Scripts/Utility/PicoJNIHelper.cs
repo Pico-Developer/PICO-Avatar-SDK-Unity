@@ -1,16 +1,16 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 public class PicoJNIHelper
 {
-	#region AndroidJNIHelper.CreateJNIArgArray 源码,取消AndroidJavaProxy
+	#region AndroidJNIHelper.CreateJNIArgArray source without AndroidJavaProxy
 
 	public static bool IsPrimitive(System.Type t)
 	{
 		return t.IsPrimitive;
 	}
 
-	//stirng 变成char[],不支持取消AndroidJavaProxy
+	// Convert strings to char arrays, because AndroidJavaProxy is not supported.
 	public static jvalue[] CreateJNIArgArray(object[] args)
 	{
 		jvalue[] ret = new jvalue[args.GetLength(0)];
@@ -46,7 +46,7 @@ public class PicoJNIHelper
 			}
 			else if (obj is System.String)
 			{
-				//转成Char数组
+				// Convert to char array.
 				char[] charData = ((String)obj).ToCharArray();
 				try
 				{

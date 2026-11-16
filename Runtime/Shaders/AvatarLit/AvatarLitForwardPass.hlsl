@@ -68,7 +68,7 @@ struct Varyings
 
 inline void InitializeAdaptiveInputData(Varyings input,half3 normalWS, out AdaptiveInputData inputData)
 {
-    //多余的
+    // Redundant.
     #if defined(REQUIRES_WORLD_SPACE_POS_INTERPOLATOR)
     inputData.positionWS = input.positionWS;
     #endif

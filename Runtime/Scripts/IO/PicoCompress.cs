@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -401,17 +401,17 @@ namespace Pico
 				}
 
 				/// <summary>
-				/// 列出path路径对应的文件夹中的子文件夹和文件
+				/// Lists subdirectories and files under the specified path.
 				/// </summary>
-				/// <param name="path">需要列出内容的文件夹的路径</param>
-				/// <param name="leval">当前递归层级，用于控制输出前导空格的数量</param>
+				/// <param name="path">Directory path to list.</param>
+				/// <param name="leval">Current recursion level, used to control output indentation.</param>
 				private void listDirectory(string path, int leval)
 				{
 					DirectoryInfo theFolder = new DirectoryInfo(@path);
 
 					leval++;
 
-					//遍历文件
+					// Iterate files.
 					foreach (FileInfo NextFile in theFolder.GetFiles())
 					{
 						string nextFileName = NextFile.FullName;
@@ -421,7 +421,7 @@ namespace Pico
 						}
 					}
 
-					//遍历文件夹
+					// Iterate directories.
 					foreach (DirectoryInfo NextFolder in theFolder.GetDirectories())
 					{
 						listDirectory(NextFolder.FullName, leval);

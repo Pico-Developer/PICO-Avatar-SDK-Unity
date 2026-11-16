@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Unity.XR.PXR;
+using ByteDance.PICO.XR;
 using UnityEngine;
-using UnityEngine.Networking;
 
 #if !NO_XR
-using Pico.Platform;
+using ByteDance.PICO.Platform.Service;
+using ByteDance.PICO.Platform.CLIB;
+using ByteDance.PICO.Platform.Framework;
 #endif
 
 
@@ -17,7 +16,7 @@ namespace Pico.Avatar.Sample
     public class PicoAppLaunchBase: MonoBehaviour
     {
         private const  string ChinaOfficialAppId = "a3e35b37bc4d8394e2912928caded3d8";
-        private const  string OverSeaOfficialAppId = "58d14f0d8aae280bd41f993fd808bbe1";
+        private const  string OverSeaOfficialAppId = "2c98d29c9de91d8a22f640e417c619eb";
         private System.Action<bool> m_platformLoginFinish = null;
 
         #region private Platform Developer Info
@@ -86,7 +85,7 @@ namespace Pico.Avatar.Sample
 #if UNITY_EDITOR_WIN
                 try
                 {
-                    Pico.Platform.CoreService.Initialize();
+                    ByteDance.PICO.Platform.Service.CoreService.Initialize();
                     platform_SvrAccessToken();
                 }
                 catch (Exception e)
@@ -97,20 +96,16 @@ namespace Pico.Avatar.Sample
 #elif UNITY_EDITOR_OSX
                 StartCoroutine(Sample_SvrAccessToken()); // sample token
 #else
-                Pico.Platform.CoreService.Initialize();
-               if(ApplicationService.GetSystemInfo().IsCnDevice)
-               {
-                   PXR_PlatformSetting.Instance.appID = ChinaOfficialAppId;
-               }
-               else
-               {
-                   PXR_PlatformSetting.Instance.appID = OverSeaOfficialAppId;
-               }
-               // reinit correct appid
-               CoreService.GameUninitialize();
-               CoreService.Initialized = false;
-               Pico.Platform.CoreService.Initialize(); 
-               platform_SvrPermissions();
+                ByteDance.PICO.Platform.Service.CoreService.Initialize();
+                var platformAppId = ByteDance.PICO.Platform.Service.ApplicationService.GetSystemInfo().IsCnDevice
+                    ? ChinaOfficialAppId
+                    : OverSeaOfficialAppId;
+                // Reinitialize with the region-specific app ID.
+                PXR_PlatformSetting.Instance.appID = platformAppId;
+                CoreService.GameUninitialize();
+                CoreService.Initialized = false;
+                ByteDance.PICO.Platform.Service.CoreService.Initialize(platformAppId);
+                platform_SvrPermissions();
 #endif
             }
             catch (System.Exception ex)
@@ -125,7 +120,7 @@ namespace Pico.Avatar.Sample
         {
             Log($"Platform RequestUserPermissions Start");
             //, "avatar" 
-            Pico.Platform.UserService.RequestUserPermissions(new string[2] { "user_info", "avatar" }).OnComplete(msg =>
+            ByteDance.PICO.Platform.Service.UserService.RequestUserPermissions(new string[2] { "user_info", "avatar" }).OnComplete(msg =>
             {
                 if (msg.IsError)
                 {
@@ -154,7 +149,7 @@ namespace Pico.Avatar.Sample
             }
             
             Log($"Platform GetLoggedInUser Start");
-            Pico.Platform.UserService.GetLoggedInUser().OnComplete((user) =>
+            ByteDance.PICO.Platform.Service.UserService.GetLoggedInUser().OnComplete((user) =>
             {
                 if (user == null || user.IsError)
                 {
@@ -176,22 +171,7 @@ namespace Pico.Avatar.Sample
             {
                 yield return null; //wait picoavtarapp init completed
                 OnPicoAvatarAppStartTestModel();
-                UnityWebRequest webRequest = UnityWebRequest.Get(NetEnvHelper.GetFullRequestUrl(NetEnvHelper.SampleTokenApi));
-                webRequest.timeout = 30;
-                webRequest.SetRequestHeader("Content-Type", "application/json"); 
-                yield return webRequest.SendWebRequest();
-                if (webRequest.result != UnityWebRequest.Result.Success)
-                {
-                    Debug.Log("Get Token Failed! Reason:" + webRequest.error);
-                    onPlatformResultCall(false);
-                    yield break;
-                }
-                /*****************Special Data For AvatarSDK Sample************************************/
-                
-                //get official accesstoken for sample, everyone is same
-                m_UserServiceAccessToken = JsonConvert.DeserializeObject<JObject>(webRequest.downloadHandler.text)?.Value<string>("data");
-                
-                /*****************End************************************/
+                m_UserServiceAccessToken = "act.pico.avatar.supertest";
                 onPlatformResultCall(true);
             }
 
@@ -199,7 +179,7 @@ namespace Pico.Avatar.Sample
         protected void platform_SvrAccessToken()
         {
             Log($"Platform GetAccessToken");
-            Pico.Platform.UserService.GetAccessToken().OnComplete(delegate (Pico.Platform.Message<string> message)
+            ByteDance.PICO.Platform.Service.UserService.GetAccessToken().OnComplete(delegate (ByteDance.PICO.Platform.Framework.Message<string> message)
             {
                 if (message.IsError)
                 {
@@ -251,9 +231,9 @@ namespace Pico.Avatar.Sample
             }
 
             // PXR 
-            var pxrMgr = XRgo.GetComponent<Unity.XR.PXR.PXR_Manager>();
+            var pxrMgr = XRgo.GetComponent<ByteDance.PICO.XR.PXR_Manager>();
             if (pxrMgr == null)
-                XRgo.gameObject.AddComponent<Unity.XR.PXR.PXR_Manager>();
+                XRgo.gameObject.AddComponent<ByteDance.PICO.XR.PXR_Manager>();
         }
         #endregion
 

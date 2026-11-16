@@ -1,4 +1,4 @@
-﻿#if NO_XR
+#if NO_XR
 
 #define SWIFT_ENABLE
 
@@ -442,42 +442,42 @@ namespace Pico
                 // then we should use the defualt length.
                 const float kBoneLenEpsilon = 0.05f * 100f;
 
-                // 头长(头顶到脖子上端的长度)
+                // Head length, measured from the top of the head to the upper neck.
                 const float kDefaultHeadLen = 0.2f * 100f;
                 bonesLength.headLen = kDefaultHeadLen;
 
-                //脖子长(脖子上端到脖子下端的长度)
+                // Neck length, measured from the upper neck to the lower neck.
                 bonesLength.neckLen = GetTotalLength(new List<Vector3> { headPos, neckPos }) * 100f;
 
-                //躯干长度（脖子下端到腰部肚脐的长度）
+                // Torso length, measured from the lower neck to the waist navel.
                 bonesLength.torsoLen = GetTotalLength(new List<Vector3> { neckPos, chestPos, spineUpperPos, spineLowerPos }) * 100f;
 
-                //腰部长度 (腰部肚脐到大腿上端中心的长度)
+                // Hip length, measured from the waist navel to the upper-leg center.
                 const float kDefaultHipLen = 0.075f * 100f;
                 bonesLength.hipLen = GetTotalLength(new List<Vector3> { spineLowerPos, hipPos }) * 100f;
                 if (Mathf.Abs(bonesLength.hipLen - kDefaultHipLen) > kBoneLenEpsilon) bonesLength.hipLen = kDefaultHipLen;  // not have SpineLower, use default value
 
-                //大腿长（臀部到膝关节长度）
+                // Upper-leg length, measured from the hip to the knee.
                 bonesLength.upperLegLen = GetTotalLength(new List<Vector3> { leftLegUpperPos, leftLegLowerPos }) * 100f;
 
-                //小腿长（膝关节到脚踝长度）
+                // Lower-leg length, measured from the knee to the ankle.
                 bonesLength.lowerLegLen = GetTotalLength(new List<Vector3> { leftLegLowerPos, leftFootAnklePos }) * 100f;
 
-                //脚长（踝关节到脚尖的长度）
+                // Foot length, measured from the ankle to the toe tip.
                 const float kDefaultFootLen = 0.135f * 100f;
                 bonesLength.footLen = GetTotalLength(new List<Vector3> { leftFootAnklePos, leftToePos, leftToeEndPos }) * 100f;
                 if (Mathf.Abs(bonesLength.footLen - kDefaultFootLen) > kBoneLenEpsilon) bonesLength.footLen = kDefaultFootLen;  // not have leftToe/LeftToeEnd, use default value
 
-                //肩宽（左右两个肩关节之间的长度）
+                // Shoulder width, measured between the left and right shoulder joints.
                 bonesLength.shoulderLen = GetTotalLength(new List<Vector3> { leftArmUpperPos, rightArmUpperPos }) * 100f;
 
-                //大臂长（肩关节到肘关节长度）
+                // Upper-arm length, measured from the shoulder to the elbow.
                 bonesLength.upperArmLen = GetTotalLength(new List<Vector3> { leftArmUpperPos, leftArmLowerPos }) * 100f;
 
-                //小臂长（肘关节到手腕长度）
+                // Lower-arm length, measured from the elbow to the wrist.
                 bonesLength.lowerArmLen = GetTotalLength(new List<Vector3> { leftArmLowerPos, leftHandWristPos }) * 100f;
 
-                //手长（腕关节到指尖的长度）
+                // Hand length, measured from the wrist to the fingertip.
                 const float kDefaultHandLen = 0.17f * 100f;
                 bonesLength.handLen = GetTotalLength(new List<Vector3> { leftHandWristPos, leftHandMiddleRootPos,
                     leftHandMiddleMetaPos, leftHandMiddleProximalPos, leftHandMiddleIntermediatePos, leftHandMiddleDistalPos }) * 100f;
@@ -534,7 +534,7 @@ namespace Pico
 #else
 
 using UnityEngine;
-using Unity.XR.PXR;
+using ByteDance.PICO.XR;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
@@ -585,7 +585,10 @@ namespace Pico
 				{
 					if (_bodyTrackingData.bodyTrackingCalibrateState == 1) return true;
 
-					PXR_Input.GetMotionTrackerCalibState(ref _bodyTrackingData.bodyTrackingCalibrateState);
+					bool isTracking = false;
+                                        BodyTrackingStatus status = new BodyTrackingStatus();
+                                        PXR_MotionTracking.GetBodyTrackingState(ref isTracking, ref status);
+                                        _bodyTrackingData.bodyTrackingCalibrateState = (status.message == BodyTrackingMessage.BT_MESSAGE_TRACKER_NOT_CALIBRATED) ? 0 : 1;
                     if (_bodyTrackingData.bodyTrackingCalibrateState == 1)
                     {
                         // after calibration
@@ -600,7 +603,7 @@ namespace Pico
 
 			#region Private Fields
 
-			private BodyTrackerResult _bodyTrackerResult;
+			private ByteDance.PICO.XR.BodyTrackingData _bodyTrackingDataFromSDK;
 			private BodyTrackingData _bodyTrackingData;
 			private float _toAdjustHeight = 0f;
 			private float _tPosePelvisHeight = 0f;
@@ -618,9 +621,11 @@ namespace Pico
             /// Motion Tracker 2.0  `0`: full-body tracking, nodes numbered 0 to 23 in `BodyTrackerRole` enum will return data. Low latency.
             /// Motion Tracker 2.0  `1`: full-body tracking, nodes numbered 0 to 23 in `BodyTrackerRole` enum will return data. High latency.
             /// </param>
+            private BodyJointSet _currentJointSet = BodyJointSet.BODY_JOINT_SET_BODY_FULL_START;
             public void SetSwiftMode(int swiftMode)
 			{
-				PXR_Input.SetBodyTrackingMode((BodyTrackingMode)swiftMode);
+                _currentJointSet = (swiftMode == 0) ? BodyJointSet.BODY_JOINT_SET_BODY_START_WITHOUT_ARM : BodyJointSet.BODY_JOINT_SET_BODY_FULL_START;
+				PXR_MotionTracking.StartBodyTracking(_currentJointSet, new BodyTrackingBoneLength());
             }
 
             /// <summary>
@@ -658,8 +663,8 @@ namespace Pico
 
 				base.Initialize(nativeHandler_, owner);
 
-				_bodyTrackerResult = new BodyTrackerResult();
-				_bodyTrackerResult.trackingdata = new BodyTrackerTransform[BodyTrackerRoleCount];
+				_bodyTrackingDataFromSDK = new ByteDance.PICO.XR.BodyTrackingData();
+				_bodyTrackingDataFromSDK.roleDatas = new ByteDance.PICO.XR.BodyTrackingRoleData[24];
 
 				_bodyTrackingData.version = 0;
 				_bodyTrackingData.bodyTrackingCalibrateState = -1;
@@ -699,20 +704,22 @@ namespace Pico
 				if (IsCalibrated)
 				{
 					// Update body tracking data
-					PXR_Input.GetBodyTrackingPose(0d, ref _bodyTrackerResult);
+					ByteDance.PICO.XR.BodyTrackingGetDataInfo getInfo = new ByteDance.PICO.XR.BodyTrackingGetDataInfo();
+					getInfo.displayTime = 0;
+					PXR_MotionTracking.GetBodyTrackingData(ref getInfo, ref _bodyTrackingDataFromSDK);
 
-					for (int i = 0; i < _bodyTrackerResult.trackingdata.Length; ++i)
+					for (int i = 0; i < BodyTrackerRoleCount; ++i)
 					{
 						_bodyTrackingData.bodyTrackingWorldPositions[i].Set(
-							(float)_bodyTrackerResult.trackingdata[i].localpose.PosX,
-							(float)_bodyTrackerResult.trackingdata[i].localpose.PosY,
-							(float)_bodyTrackerResult.trackingdata[i].localpose.PosZ);
+							(float)_bodyTrackingDataFromSDK.roleDatas[i].localPose.PosX,
+							(float)_bodyTrackingDataFromSDK.roleDatas[i].localPose.PosY,
+							(float)_bodyTrackingDataFromSDK.roleDatas[i].localPose.PosZ);
 
 						_bodyTrackingData.bodyTrackingWorldOrientations[i].Set(
-							(float)_bodyTrackerResult.trackingdata[i].localpose.RotQx,
-							(float)_bodyTrackerResult.trackingdata[i].localpose.RotQy,
-							(float)_bodyTrackerResult.trackingdata[i].localpose.RotQz,
-							(float)_bodyTrackerResult.trackingdata[i].localpose.RotQw);
+							(float)_bodyTrackingDataFromSDK.roleDatas[i].localPose.RotQx,
+							(float)_bodyTrackingDataFromSDK.roleDatas[i].localPose.RotQy,
+							(float)_bodyTrackingDataFromSDK.roleDatas[i].localPose.RotQz,
+							(float)_bodyTrackingDataFromSDK.roleDatas[i].localPose.RotQw);
 					}
 
 					// Adjust the height of both feet to fit the ground.
@@ -808,49 +815,49 @@ namespace Pico
 				// then we should use the defualt length.
 				const float kBoneLenEpsilon = 0.05f * 100f;
 
-				// 头长(头顶到脖子上端的长度)
+				// Head length, measured from the top of the head to the upper neck.
 				const float kDefaultHeadLen = 0.2f * 100f;
 				bonesLength.headLen = kDefaultHeadLen;
 
-				//脖子长(脖子上端到脖子下端的长度)
+				// Neck length, measured from the upper neck to the lower neck.
 				bonesLength.neckLen = GetTotalLength(new List<Vector3> { headPos, neckPos }) * 100f;
 
-				//躯干长度（脖子下端到腰部肚脐的长度）
+				// Torso length, measured from the lower neck to the waist navel.
 				bonesLength.torsoLen = GetTotalLength(new List<Vector3>
 					{ neckPos, chestPos, spineUpperPos, spineLowerPos }) * 100f;
 
-				//腰部长度 (腰部肚脐到大腿上端中心的长度)
+				// Hip length, measured from the waist navel to the upper-leg center.
 				const float kDefaultHipLen = 0.075f * 100f;
 				bonesLength.hipLen = GetTotalLength(new List<Vector3> { spineLowerPos, hipPos }) * 100f;
 				if (Mathf.Abs(bonesLength.hipLen - kDefaultHipLen) > kBoneLenEpsilon)
 					bonesLength.hipLen = kDefaultHipLen; // not have SpineLower, use default value
 
-				//大腿长（臀部到膝关节长度）
+				// Upper-leg length, measured from the hip to the knee.
 				bonesLength.upperLegLen = GetTotalLength(new List<Vector3> { leftLegUpperPos, leftLegLowerPos }) * 100f;
 
-				//小腿长（膝关节到脚踝长度）
+				// Lower-leg length, measured from the knee to the ankle.
 				bonesLength.lowerLegLen =
 					GetTotalLength(new List<Vector3> { leftLegLowerPos, leftFootAnklePos }) * 100f;
 
-				//脚长（踝关节到脚尖的长度）
+				// Foot length, measured from the ankle to the toe tip.
 				const float kDefaultFootLen = 0.135f * 100f;
 				bonesLength.footLen =
 					GetTotalLength(new List<Vector3> { leftFootAnklePos, leftToePos, leftToeEndPos }) * 100f;
 				if (Mathf.Abs(bonesLength.footLen - kDefaultFootLen) > kBoneLenEpsilon)
 					bonesLength.footLen = kDefaultFootLen; // not have leftToe/LeftToeEnd, use default value
 
-				//肩宽（左右两个肩关节之间的长度）
+				// Shoulder width, measured between the left and right shoulder joints.
 				bonesLength.shoulderLen =
 					GetTotalLength(new List<Vector3> { leftArmUpperPos, rightArmUpperPos }) * 100f;
 
-				//大臂长（肩关节到肘关节长度）
+				// Upper-arm length, measured from the shoulder to the elbow.
 				bonesLength.upperArmLen = GetTotalLength(new List<Vector3> { leftArmUpperPos, leftArmLowerPos }) * 100f;
 
-				//小臂长（肘关节到手腕长度）
+				// Lower-arm length, measured from the elbow to the wrist.
 				bonesLength.lowerArmLen =
 					GetTotalLength(new List<Vector3> { leftArmLowerPos, leftHandWristPos }) * 100f;
 
-				//手长（腕关节到指尖的长度）
+				// Hand length, measured from the wrist to the fingertip.
 				const float kDefaultHandLen = 0.17f * 100f;
 				bonesLength.handLen = GetTotalLength(new List<Vector3>
 				{
@@ -861,7 +868,7 @@ namespace Pico
 				if (Mathf.Abs(bonesLength.handLen - kDefaultHandLen) > kBoneLenEpsilon)
 					bonesLength.handLen = kDefaultHandLen; // not have leftHandMiddleXxx, use default value
 
-				PXR_Input.SetBodyTrackingBoneLength(bonesLength);
+				PXR_MotionTracking.StartBodyTracking(_currentJointSet, bonesLength);
 			}
 
 			private static float GetTotalLength(List<Vector3> points)

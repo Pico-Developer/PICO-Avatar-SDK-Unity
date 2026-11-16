@@ -2076,11 +2076,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   screenFade: 0
   eyeTracking: 0
-  trackingMode: 0
+  trackingMode: 2
   sharpeningMode: 0
   sharpeningEnhance: 0
-  faceTracking: 0
-  lipsyncTracking: 0
+  faceTracking: 1
+  lipsyncTracking: 1
   lateLatching: 0
   latelatchingDebug: 0
   bodyTracking: 1

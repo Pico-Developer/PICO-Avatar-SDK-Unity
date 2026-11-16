@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
 
@@ -197,7 +197,7 @@ namespace Pico
             //        // remove
             //        if (GUILayout.Button("-", GUILayout.Width(20f)))
             //        {
-            //            // 把后续的往前移.
+            //            // Shift following items forward.
             //            for (int j = i; j < newCount - 1; ++j)
             //            {
             //                array[j] = array[j + 1];
@@ -211,7 +211,7 @@ namespace Pico
             //        {
             //            System.Array.Resize<T>(ref array, newCount + 1);
 
-            //            // 把当前往后移.
+            //            // Shift current and following items backward.
             //            for (int j = newCount; j > i; --j)
             //            {
             //                array[j] = array[j - 1];
@@ -272,7 +272,7 @@ namespace Pico
                     // remove
                     if (GUILayout.Button("-", GUILayout.Width(20f)))
                     {
-                        // 把后续的往前移.
+                        // Shift following items forward.
                         for (int j = i; j < newCount - 1; ++j)
                         {
                             array[j] = array[j + 1];
@@ -286,7 +286,7 @@ namespace Pico
                     {
                         System.Array.Resize<T>(ref array, newCount + 1);
 
-                        // 把当前往后移.
+                        // Shift current and following items backward.
                         for (int j = newCount; j > i; --j)
                         {
                             array[j] = array[j - 1];
@@ -338,7 +338,7 @@ namespace Pico
                     // remove
                     if (GUILayout.Button("-", GUILayout.Width(20f)))
                     {
-                        // 把后续的往前移.
+                        // Shift following items forward.
                         for (int j = i; j < newCount - 1; ++j)
                         {
                             array[j] = array[j + 1];
@@ -352,7 +352,7 @@ namespace Pico
                     {
                         System.Array.Resize<T>(ref array, newCount + 1);
 
-                        // 把当前往后移.
+                        // Shift current and following items backward.
                         for (int j = newCount; j > i; --j)
                         {
                             array[j] = array[j - 1];
@@ -447,7 +447,7 @@ namespace Pico
                     // remove
                     if (GUILayout.Button("-", GUILayout.Width(20f)))
                     {
-                        // 把后续的往前移.
+                        // Shift following items forward.
                         for (int j = i; j < newCount - 1; ++j)
                         {
                             array[j] = array[j + 1];
@@ -461,7 +461,7 @@ namespace Pico
                     {
                         System.Array.Resize<AnimationCurve>(ref array, newCount + 1);
 
-                        // 把当前往后移.
+                        // Shift current and following items backward.
                         for (int j = newCount; j > i; --j)
                         {
                             array[j] = array[j - 1];
@@ -511,9 +511,9 @@ namespace Pico
             //
             private static string[] _SexNames = new string[]
             {
-                "女性",    // Femal = 0
-                 "男性",    // Male = 1
-                 "其他",   
+                "Femal",    // Femal = 0
+                 "Male",    // Male = 1
+                 "Other",   
             };
             #endregion
 

@@ -1,13 +1,13 @@
-PICO Integration SDK is the main SDK for PICO development.It consists of XR SDK and Platform SDK.   
-This repo contains  Avatar SDK source code.
-It meets untiy’s structural requirements for packagemanager
+# PICO Avatar SDK
+
+PICO Avatar SDK provides a range of features, components, and scripts covering rendering, interaction, sensing, platform services, and more.
+This repository contains the Avatar SDK package source code and follows Unity's package manager structure.
 
 # Requirement
 
-| Environment          | Version             |
-|----------------------|---------------------|
-| Unity Editor         | &ge;2020.3 &le;2022.3 |
-| PICO Unity Integration SDK | &ge;3.0.0           |
-| PICO Device's System Version | &ge;5.12.0           |
-
-
+| Environment                    | Version                       |
+|--------------------------------|-------------------------------|
+| Unity Editor                   | &ge;2022.3, &lt; Unity 6      |
+| PICO Avatar SDK                | &ge;6.0.0                     |
+| PICO Unity SDK (XR)            | &ge;6.0.0                     |
+| PICO Device's System Version  | &ge;6.0.0                     |

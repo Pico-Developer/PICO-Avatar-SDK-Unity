@@ -7,7 +7,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 #if !NO_XR && UNITY_EDITOR
-using Pico.Platform.Editor;
+using ByteDance.PICO.Platform.Editor;
 #endif
 
 #if UNITY_EDITOR
@@ -924,16 +924,25 @@ namespace Pico
 				PlayerPrefs.SetInt("NationSelect", (int)NationType.China);
 			}
 
-			[MenuItem("AvatarSDK/NationType/OverSea")]
+			[MenuItem("AvatarSDK/NationType/US")]
+			public static void SetUS()
+			{
+				PlayerPrefs.SetInt("NationSelect", (int)NationType.US);
+			}
+
+			[MenuItem("AvatarSDK/NationType/Other")]
 			public static void SetOverSea()
 			{
 				PlayerPrefs.SetInt("NationSelect", (int)NationType.Oversea);
 			}
-			[MenuItem("AvatarSDK/NationType/OverSea", true)]
-			public static bool CheckCN()
+			[MenuItem("AvatarSDK/NationType/CN", true)]
+			[MenuItem("AvatarSDK/NationType/US", true)]
+			[MenuItem("AvatarSDK/NationType/Other", true)]
+			public static bool CheckNation()
 			{
 				Menu.SetChecked("AvatarSDK/NationType/CN", GetPCNation() == NationType.China);
-				Menu.SetChecked("AvatarSDK/NationType/OverSea", GetPCNation() == NationType.Oversea);
+				Menu.SetChecked("AvatarSDK/NationType/US", GetPCNation() == NationType.US);
+				Menu.SetChecked("AvatarSDK/NationType/Other", GetPCNation() == NationType.Oversea);
 				return true;
 			}
 			public static NationType GetPCNation()

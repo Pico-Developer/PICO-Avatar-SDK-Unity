@@ -1,5 +1,5 @@
-﻿using UnityEngine;
-using Unity.XR.PXR;
+using UnityEngine;
+using ByteDance.PICO.XR;
 using UnityEngine.XR;
 using System.Collections.Generic;
 
@@ -261,8 +261,8 @@ namespace Pico.Avatar.Sample
 #endif
 
 
-            //  PXR_Plugin.Controller.UPxr_GetControllerTrackingState((uint)PXR_Input.Controller.LeftController, 0, headData, ref pxrControllerTrackingLeft);
-            PXR_Plugin.Controller.UPxr_GetControllerTrackingState((uint)PXR_Input.Controller.RightController, 0, headData, ref pxrControllerTrackingRight);
+            //  PXR_Plugin.Controller.UPxr_GetControllerTrackingState((uint)PXR_Input.Controller.LeftController, 0, ref pxrControllerTrackingLeft);
+            PXR_Plugin.Controller.UPxr_GetControllerTrackingState((uint)PXR_Input.Controller.RightController, 0, ref pxrControllerTrackingRight);
             uint rightControllerStatus = (uint)pxrControllerTrackingRight.localControllerPose.status;
 
             //判断控制器是否连接可以使用

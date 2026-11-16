@@ -1,4 +1,4 @@
-﻿// using UnityEditor;
+// using UnityEditor;
 //
 // namespace Pico
 // {
@@ -31,7 +31,7 @@
 //                 }
 //             }
 //
-//             /** 绘制GUI．*/
+//             /** Draw GUI. */
 //             public bool DrawGUI()
 //             {
 //                 //platform
@@ -55,11 +55,11 @@
 //             }
 //
 //             private ResourcePlatform _ResourcePlatform = ResourcePlatform.NUM;
-//             private ResourceTechniqueLevel _ResourceTechniqueLevel = ResourceTechniqueLevel.Lowest; // 默认最低等级资源.
+//             private ResourceTechniqueLevel _ResourceTechniqueLevel = ResourceTechniqueLevel.Lowest; // Default to the lowest resource level.
 //                                                                                                     //
 //             private string[] _ResourcePlatformNames = new string[]
 //             {
-//                 "Any",    // Any = 0,  // 通用平台. 
+//                 "Any",    // Any = 0,  // Common platform.
 //                 "PC",     // PC = 1,    
 //                 "Mobile", // Mobile = 2,
 //             };

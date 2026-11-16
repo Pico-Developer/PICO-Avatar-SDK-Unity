@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System;
@@ -145,7 +145,7 @@ public class PropertyGroupDrawer
 		Type type = obj.GetType();
 
 		
-	  // 获取类型的指定特性
+	  // Get the specified attributes for this type.
 		MemberInfo[] member = type.GetMembers();
 		foreach(var item in member)
         {
@@ -314,5 +314,4 @@ public class PropertyGroupDrawer
 		return isDirty;
 		}
 }
-
 

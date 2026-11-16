@@ -120,7 +120,6 @@ struct AdaptiveInputData
     #define SAMPLE_METALLICSPECULAR(uv) SAMPLE_TEXTURE2D(_MetallicGlossMap, sampler_MetallicGlossMap, uv)
 #endif
 
-//优雅。
 half Alpha(half albedoAlpha, half4 color, half cutoff)
 {
     #if !defined(_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A) && !defined(_GLOSSINESS_FROM_BASE_ALPHA)

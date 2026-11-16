@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Runtime.InteropServices;
 
 namespace Pico
@@ -436,7 +436,7 @@ namespace Pico
 			[DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
 			private static extern System.IntPtr pav_IDParameterTable_New();
 			
-            //查询参数数量.
+            // Query parameter count.
             //@param paramValueType 0:int 1:float 2:string.
             [DllImport(PavDLLName, CallingConvention = CallingConvention.Cdecl)]
 			private static extern int pav_IDParameterTable_GetParamCount(System.IntPtr dataHandle, uint paramValueType);

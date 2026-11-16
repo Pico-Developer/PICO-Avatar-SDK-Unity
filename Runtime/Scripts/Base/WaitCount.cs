@@ -1,4 +1,4 @@
-﻿namespace Pico
+namespace Pico
 {
 	namespace Avatar
 	{
@@ -15,7 +15,7 @@
 			}
 #endif
 
-			// 在GameInit.Shutdown时会清除所有的Coroutine，所以这里要检查清理callback
+			// GameInit.Shutdown clears all coroutines, so cleanup callbacks here.
 			~WaitCounter()
 			{
 #if DEBUG
@@ -41,7 +41,7 @@
 			{
 				_waitingCount -= count;
 
-				// 如果计数为0，发送通知.
+				// Send the notification when the count reaches zero.
 				if (_waitingCount == 0 && _finishedCallback != null)
 				{
 					var callback = _finishedCallback;

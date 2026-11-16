@@ -1,4 +1,4 @@
-﻿Shader "PAV/AvatarEditor/FakePointLight"
+Shader "PAV/AvatarEditor/FakePointLight"
 {
     Properties
     {
@@ -21,13 +21,13 @@
 
         [Header(__________Base Light________________________)]
         [Space(10)]
-        _Color("基础颜色Color(RGBA)", Color) = (0,0,0,0)
+        _Color("BaseColor(RGBA)", Color) = (0,0,0,0)
 
         [Header(__________Top Light________________________)]
         [Space(10)]
-        _TopLightColor("顶部光Color(RGBA)", Color) = (1,1,1,1)
-        _TopLightPosition("位置(x,y,scale,scale)", Vector) = (0,1.0,1.0,1.0)
-        _TopLightParam("参数(半径,pow,0,0)", Vector) = (2.0,3.0,0,0)
+        _TopLightColor("Top Light Color(RGBA)", Color) = (1,1,1,1)
+        _TopLightPosition("Position(x,y,scale,scale)", Vector) = (0,1.0,1.0,1.0)
+        _TopLightParam("Params(radius,pow,0,0)", Vector) = (2.0,3.0,0,0)
 
        [Toggle(_ENABLE_TEXTURE)] _EnableTexture("EnableTexture", Float) = 0
     }
@@ -181,7 +181,7 @@
                     float4 ret = tex2D(_BaseMap, input.texcoord);
                     return float4(ret.xyz * gray.xyz, 1.0);
 #else
-                    // 混合颜色.
+                    // Blend color.
                     return float4(gray.xyz * shadow, 1);/// float4(gray, gray, gray, 1.0);
 #endif
                 }

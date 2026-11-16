@@ -1,4 +1,4 @@
-﻿namespace Pico.Avatar
+namespace Pico.Avatar
 {
 	/// <summary>
 	/// server type. boe or not
@@ -63,7 +63,7 @@
 	};
 	
 	/// <summary>
-	/// nation type. china or oversea
+	/// nation type. china / us / oversea
 	/// </summary>
 	public enum NationType : uint
 	{
@@ -77,8 +77,13 @@
 		China = 1,
 
 		/// <summary>
-		/// Oversea
+		/// Oversea (ROW)
 		/// </summary>
 		Oversea = 2,
+
+		/// <summary>
+		/// US (TTP)
+		/// </summary>
+		US = 3,
 	};
 }

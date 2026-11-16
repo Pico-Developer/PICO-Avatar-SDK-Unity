@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
@@ -20,29 +20,26 @@ public class ResourceJSPostprocessor : AssetPostprocessor
                 return false;
             if (sourceFolder.EndsWith(".meta") && destFolder.EndsWith(".meta"))
             {
-                System.IO.File.Copy(sourceFolder, destFolder, true);//复制文件
+                System.IO.File.Copy(sourceFolder, destFolder, true);
                 return true;
             }
-            //如果目标路径不存在,则创建目标路径
             if (!System.IO.Directory.Exists(destFolder))
             {
                 System.IO.Directory.CreateDirectory(destFolder);
             }
-            //得到原文件根目录下的所有文件
             string[] files = System.IO.Directory.GetFiles(sourceFolder);
             foreach (string file in files)
             {
                 string name = System.IO.Path.GetFileName(file);
                 string dest = System.IO.Path.Combine(destFolder, name);
-                System.IO.File.Copy(file, dest, true);//复制文件
+                System.IO.File.Copy(file, dest, true);
             }
-            //得到原文件根目录下的所有文件夹
             string[] folders = System.IO.Directory.GetDirectories(sourceFolder);
             foreach (string folder in folders)
             {
                 string name = System.IO.Path.GetFileName(folder);
                 string dest = System.IO.Path.Combine(destFolder, name);
-                CopyFolder(folder, dest, ignoreList);//构建目标路径,递归复制文件
+                CopyFolder(folder, dest, ignoreList);
             }
             return true;
         }
@@ -58,17 +55,13 @@ public class ResourceJSPostprocessor : AssetPostprocessor
 
         try
         {
-            //去除文件夹和子文件的只读属性
-            //去除文件夹的只读属性
             System.IO.DirectoryInfo fileInfo = new DirectoryInfo(file);
             if (fileInfo == null)
                 return true;
             fileInfo.Attributes = FileAttributes.Normal & FileAttributes.Directory;
 
-            //去除文件的只读属性
             System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
 
-            //判断文件夹是否还存在
             if (Directory.Exists(file) && !IsContainsInList(IgnoreList, file))
             {
 
@@ -77,26 +70,23 @@ public class ResourceJSPostprocessor : AssetPostprocessor
 
                     if (File.Exists(f) && !IsContainsInList(IgnoreList, f))
                     {
-                        //如果有子文件删除文件
                         File.Delete(f);
                         Console.WriteLine(f);
                     }
                     else
                     {
-                        //循环递归删除子文件夹
                         DeleteDir(f, IgnoreList, false);
                     }
 
                 }
 
-                //删除空文件夹
                 if (!skipRoot)
                     Directory.Delete(file);
 
             }
             return true;
         }
-        catch (Exception ex) // 异常处理
+        catch (Exception ex)
         {
             UnityEngine.Debug.LogError(ex.Message);
             return false;

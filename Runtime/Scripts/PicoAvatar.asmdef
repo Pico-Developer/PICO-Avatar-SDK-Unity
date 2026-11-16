@@ -2,14 +2,13 @@
   "name": "PicoAvatar",
   "rootNamespace": "",
   "references": [
-    "Unity.XR.PicoXR",
     "Unity.InputSystem",
     "Unity.RenderPipelines.Core.Runtime",
     "Unity.RenderPipelines.Universal.Runtime",
     "Unity.Mathematics",
-    "Unity.XR.PICO",
-    "PICO.Platform",
-    "PICO.Platform.Editor"
+    "ByteDance.PICO.XR",
+    "ByteDance.PICO.Platform",
+    "ByteDance.PICO.Platform.Editor"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
