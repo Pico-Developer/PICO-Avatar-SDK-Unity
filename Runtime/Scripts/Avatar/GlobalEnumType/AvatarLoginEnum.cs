@@ -63,7 +63,7 @@ namespace Pico.Avatar
 	};
 	
 	/// <summary>
-	/// nation type. china / us / oversea
+	/// nation type. Values match the AvatarSDK/NationType editor menu order: CN=1, US=2, Other=3.
 	/// </summary>
 	public enum NationType : uint
 	{
@@ -72,18 +72,18 @@ namespace Pico.Avatar
 		/// </summary>
 		Unknown = 0,
 		/// <summary>
-		/// China
+		/// China (CN)
 		/// </summary>
-		China = 1,
-
-		/// <summary>
-		/// Oversea (ROW)
-		/// </summary>
-		Oversea = 2,
+		CN = 1,
 
 		/// <summary>
 		/// US (TTP)
 		/// </summary>
-		US = 3,
+		US = 2,
+
+		/// <summary>
+		/// Other / Oversea (ROW)
+		/// </summary>
+		Other = 3,
 	};
 }

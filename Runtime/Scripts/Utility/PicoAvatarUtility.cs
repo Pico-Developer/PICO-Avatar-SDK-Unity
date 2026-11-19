@@ -26,7 +26,7 @@ namespace Pico
 			#region File Path
 
 			[Tooltip(
-				"desired avatar cache directory. Must be set before invoke Start and StartApp. e.g. Application.persistentDataPath + \"/PicoAvatarCache\". if is empty, \"/sdcard/AvatarCache\" will be used.")]
+				"desired avatar cache directory. Must be set before invoke Start and StartApp. e.g. Application.persistentDataPath + \"/PicoAvatarCache\". if is empty, Application.persistentDataPath + \"/AvatarCache\" will be used.")]
 			public static string desiredAvatarCacheDirectory;
 
 			/// <summary>
@@ -921,7 +921,7 @@ namespace Pico
 			[MenuItem("AvatarSDK/NationType/CN", false, 1)]
 			public static void SetChina()
 			{
-				PlayerPrefs.SetInt("NationSelect", (int)NationType.China);
+				PlayerPrefs.SetInt("NationSelect", (int)NationType.CN);
 			}
 
 			[MenuItem("AvatarSDK/NationType/US", false, 2)]
@@ -933,16 +933,16 @@ namespace Pico
 			[MenuItem("AvatarSDK/NationType/Other", false, 3)]
 			public static void SetOverSea()
 			{
-				PlayerPrefs.SetInt("NationSelect", (int)NationType.Oversea);
+				PlayerPrefs.SetInt("NationSelect", (int)NationType.Other);
 			}
 			[MenuItem("AvatarSDK/NationType/CN", true)]
 			[MenuItem("AvatarSDK/NationType/US", true)]
 			[MenuItem("AvatarSDK/NationType/Other", true)]
 			public static bool CheckNation()
 			{
-				Menu.SetChecked("AvatarSDK/NationType/CN", GetPCNation() == NationType.China);
+				Menu.SetChecked("AvatarSDK/NationType/CN", GetPCNation() == NationType.CN);
 				Menu.SetChecked("AvatarSDK/NationType/US", GetPCNation() == NationType.US);
-				Menu.SetChecked("AvatarSDK/NationType/Other", GetPCNation() == NationType.Oversea);
+				Menu.SetChecked("AvatarSDK/NationType/Other", GetPCNation() == NationType.Other);
 				return true;
 			}
 			public static NationType GetPCNation()
@@ -954,7 +954,7 @@ namespace Pico
 			{
 				var config = Resources.Load<TextAsset>("PicoSdkPCConfig");
 				if (config == null)
-					return GetPCNation() == NationType.China;
+					return GetPCNation() == NationType.CN;
 				var obj = JsonConvert.DeserializeObject<JObject>(config.text);
 				if (obj != null)
 				{
@@ -969,7 +969,7 @@ namespace Pico
 						}
 					}
 				}
-				return GetPCNation() == NationType.China;
+				return GetPCNation() == NationType.CN;
 			}
 	#endif
 			#endregion

@@ -625,7 +625,7 @@ namespace Pico
 			{
 #if UNITY_EDITOR && !NO_XR
 				NationType nation = Utility.GetPCNation();
-				if (nation == NationType.China) return "cn";
+				if (nation == NationType.CN) return "cn";
 				if (nation == NationType.US) return "ttp";
 				return "row";
 #elif NO_XR || UNITY_STANDALONE_LINUX
