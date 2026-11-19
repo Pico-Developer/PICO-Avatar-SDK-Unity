@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using UnityEngine;
 using System.Runtime.InteropServices;
 using System.Collections;
 using System.Collections.Generic;
 #if !NO_XR
-using Pico.Platform;
+using ByteDance.PICO.Platform.Service;
 #endif
 
 namespace Pico
@@ -70,6 +70,7 @@ namespace Pico
 
 			#region Public Fields
 
+			public string token;
 			/// <summary>
 			/// App related settings
 			/// </summary>
@@ -622,7 +623,19 @@ namespace Pico
 
 			internal string GetNationType()
 			{
-				return IsCnDevice() ? "cn": "sg";
+#if UNITY_EDITOR && !NO_XR
+				NationType nation = Utility.GetPCNation();
+				if (nation == NationType.CN) return "cn";
+				if (nation == NationType.US) return "ttp";
+				return "row";
+#elif NO_XR || UNITY_STANDALONE_LINUX
+				string nt = loginSettings.nationType;
+				if (nt == "cn" || nt == "cn-test") return "cn";
+				if (nt == "ttp") return "ttp";
+				return "row";
+#else
+				return ByteDance.PICO.Platform.Service.ApplicationService.GetSystemInfo().IsCnDevice ? "cn" : "row";
+#endif
 			}
 
 			/// <summary>
@@ -636,7 +649,7 @@ namespace Pico
 #elif NO_XR || UNITY_STANDALONE_LINUX
 				return loginSettings.nationType.Equals("cn") || loginSettings.nationType.Equals("cn-test");
 #else
-				return ApplicationService.GetSystemInfo().IsCnDevice;
+				return ByteDance.PICO.Platform.Service.ApplicationService.GetSystemInfo().IsCnDevice;
 #endif
 			}
 			
@@ -701,20 +714,20 @@ namespace Pico
 				return true;
 #else
 				
-				if(ApplicationService.GetSystemInfo() == null)
+				if(ByteDance.PICO.Platform.Service.ApplicationService.GetSystemInfo() == null)
 				{
-					Pico.Platform.CoreService.Initialize();			
+					ByteDance.PICO.Platform.Service.CoreService.Initialize();			
 				}
 
-				if(!Pico.Platform.CoreService.IsInitialized() || ApplicationService.GetSystemInfo() == null)
+				if(!ByteDance.PICO.Platform.Service.CoreService.IsInitialized() || ByteDance.PICO.Platform.Service.ApplicationService.GetSystemInfo() == null)
 				{
 					UnityEngine.Debug.Log("pav: PicoAvatarSdk Starting. Platform core service not initialized. Please setup appid correctly.");
 						return false;
 				}
 				
-				string ROMVersion = ApplicationService.GetSystemInfo().ROMVersion;
-				string MatrixVersionName = ApplicationService.GetSystemInfo().MatrixVersionName;
-				// long MatrixVersionCode = ApplicationService.GetSystemInfo().MatrixVersionCode;
+				string ROMVersion = ByteDance.PICO.Platform.Service.ApplicationService.GetSystemInfo().ROMVersion;
+				string MatrixVersionName = ByteDance.PICO.Platform.Service.ApplicationService.GetSystemInfo().MatrixVersionName;
+				// long MatrixVersionCode = ByteDance.PICO.Platform.Service.ApplicationService.GetSystemInfo().MatrixVersionCode;
 
 				if(String.IsNullOrEmpty(ROMVersion) || String.IsNullOrEmpty(MatrixVersionName))
 				{
@@ -733,7 +746,7 @@ namespace Pico
 
 				//check ROM
 				{
-					if(CompareVersion(ROMVersion, appSettings.minRomVersion) < 0)
+					if(false && CompareVersion(ROMVersion, appSettings.minRomVersion) < 0)
 					{
 						string errorMessage = string.Format(
 							"pav: PicoAvatarSdk Starting. Rom version mismatch, CurrentVersion:{0}  RequiredVersion: {1}",
@@ -751,7 +764,7 @@ namespace Pico
 				//check Matrix
 				if(!localMode)
 				{
-					if(CompareVersion(MatrixVersionName, appSettings.minMatrixVersion) < 0)
+					if(false && CompareVersion(MatrixVersionName, appSettings.minMatrixVersion) < 0)
 					{
 						string errorMessage = string.Format(
 							"pav: PicoAvatarSdk Starting. Matrix version mismatch, CurrentVersion:{0}  RequiredVersion: {1}",
@@ -1145,7 +1158,7 @@ namespace Pico
 				    if (string.IsNullOrEmpty(loginSettings.accessToken))
 				    {
 				        UnityWebRequest webRequest = UnityWebRequest.Get(NetEnvHelper.GetFullRequestUrl(NetEnvHelper.SampleTokenApi));
-				        webRequest.timeout = 10; // 设置超时时间为10秒
+				        webRequest.timeout = 10; // Set the request timeout to 10 seconds.
 				        webRequest.SetRequestHeader("Content-Type", "application/json"); 
 				        yield return webRequest.SendWebRequest();
 				        if (webRequest.result != UnityWebRequest.Result.Success)

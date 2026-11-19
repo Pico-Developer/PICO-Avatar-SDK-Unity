@@ -399,7 +399,7 @@ namespace Pico
 		}
 
 		// Bit combines of AvatarNodeTypes
-		// 先不导出了，工具会乱
+		// Do not export this yet because the tool does not handle it correctly.
 		public enum AvatarNodeTypeCombines : uint
 		{
 			/// <summary>
@@ -973,7 +973,7 @@ namespace Pico
 			/// </summary>
 			Half = 1,
 
-			// 不导出
+			// Not exported.
 			Packed_10_10_10_2_snorm = 2,
 		}
 

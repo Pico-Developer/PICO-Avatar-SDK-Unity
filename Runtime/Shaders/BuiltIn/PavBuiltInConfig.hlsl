@@ -1,4 +1,4 @@
-﻿#ifndef PAV_BUILTIN_INCLUDED
+#ifndef PAV_BUILTIN_INCLUDED
 #define PAV_BUILTIN_INCLUDED
 
 #define TEMPLATE_2_REAL TEMPLATE_2_FLT
@@ -446,7 +446,7 @@ real3 LogCToLinear(real3 x)
 #	endif
 #endif
 
-////////////////////////////////////顶点数据替换/////////////////////////////////////////////////////////////
+//////////////////////////////////// Vertex data replacement /////////////////////////////////////////////////////////////
 
 //struct Attributes
 //{
@@ -574,4 +574,3 @@ real3 LogCToLinear(real3 x)
 #endif
 
 #endif // PAV_BUILTIN_INCLUDED
-

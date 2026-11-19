@@ -1,0 +1,5 @@
+# IDE / OS generated files
+.idea/
+.vscode/
+.DS_Store
+*.swp

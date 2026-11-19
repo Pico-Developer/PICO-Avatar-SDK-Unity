@@ -469,6 +469,13 @@ namespace Pico
 				}
 			}
 
+			/// <summary>
+			/// Gets the bounding box under the current LOD (Level of Detail).
+			/// </summary>
+			/// <param name="bounds">The bounding box to be returned.</param>
+			/// <param name="isInitial">If true, gets the bounding box calculated at creation; if false, gets the bounding box calculated at the last time.</param>
+			/// <param name="isConservative">If true, expands the smaller of the length and width (horizontal plane) based on their difference, making the difference 20% of the original value.</param>
+			/// <returns>Returns true if the bounding box is successfully retrieved.</returns>
 			public bool GetActiveLodBounds(out Bounds bounds, bool isInitial = true, bool isConservative = true)
             {
 				if (this._activeLod != null)
@@ -483,7 +490,12 @@ namespace Pico
 				}
             }
 
-            public bool RecalculateActiveLodBounds(bool needUpdateRenderer = false)
+			/// <summary>
+			/// Recalculates the bounding box under the current LOD (Level of Detail).
+			/// </>
+			/// <param name="needUpdateRenderer">Specifies whether the bounding box needs to updated on the Renderer.</param>
+			/// <returns>Returns if the bounding box successfully recalculated.</returns>
+			public bool RecalculateActiveLodBounds(bool needUpdateRenderer = false)
             {
                 if (this._activeLod != null)
                 {

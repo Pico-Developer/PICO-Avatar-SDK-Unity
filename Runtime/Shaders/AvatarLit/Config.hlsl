@@ -1,7 +1,7 @@
 #ifndef AVATAR_CONFIGURE
 #define AVATAR_CONFIGURE
-// 当此变量为1时，avatar shader feature 失效，走下面配置的关键字
-// 当此变量为0时，avatar shader 退化为正常shader与SVN仓库保持一致
+// When this variable is 1, avatar shader features are disabled and the keywords below are used.
+// When this variable is 0, the avatar shader falls back to the normal shader behavior for SVN compatibility.
 #define REQUIRE_BAKE_AVATAR_KEYWORDS 1
 
 #if REQUIRE_BAKE_AVATAR_KEYWORDS

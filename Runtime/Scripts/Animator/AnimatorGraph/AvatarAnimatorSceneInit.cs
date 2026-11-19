@@ -138,8 +138,8 @@ namespace Pico
 
 				avatarApp = Instantiate(avatarApp);
 				_app = avatarApp.GetComponent<PicoAvatarApp>();
-				_app.loginSettings.accessToken =
-					"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHBpcmVJbiI6IjE2NTQ0MDE5MDAiLCJzaWciOiJsaWdodHBhY2thZ2UiLCJ0b2tlblR5cGUiOiIwIiwidXNlcklEIjoiMTE1NDU2MzkyNTI2NzEzMjQxNiIsInZlcnNpb24iOiIwLjAuMSJ9.d8cvtJthkot6C0lWCzsMVzzrAH1jlklhzW1zCResAug";
+				_app.loginSettings.accessToken = _app.token;
+					
 				// _app.serverType = ServerType.ProductionEnv;
 				_app.accessType = AccessType.ThirdApp;
 				_app.extraSettings.avatarSceneLayer = _avatarLayer;

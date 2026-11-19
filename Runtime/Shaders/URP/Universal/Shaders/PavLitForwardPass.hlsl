@@ -196,7 +196,7 @@ Varyings LitPassVertex(Attributes input)
 #ifdef PAV_RIM_PROFILE
 float3 ProfileRim(float3 normalWS, float3 viewDirWS)
 {
-    //下面代码使Android上看不到
+    // The following code makes the object invisible on Android.
     //#ifdef  MacroUseDoubleFacedLighting
     //		if (!s.frontSide) return 0;
     //#endif
@@ -210,10 +210,10 @@ float3 ProfileRim(float3 normalWS, float3 viewDirWS)
     //float rimAmplify = 1.0;
     //float3 rimScatter = 0;
 
-    //_ProfileRimColor.a 小于0.5采用正片叠底。 否则是加亮模式.
+    // Use multiply when _ProfileRimColor.a is below 0.5; otherwise use lighten mode.
     //if (rimAmplify < 0.0)
     //{
-    //    // 如果小于0.5，施加到正片叠底通道.
+    //    // Apply to the multiply channel when the value is below 0.5.
     //    s.multiplyColor.rgb = lerp(1, _ProfileRimColor.rgb, t * -rimAmplify);
     //    //s.multiplyColor.rgb = t * -rimAmplify;
     //    return 0;

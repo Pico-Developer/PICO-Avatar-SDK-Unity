@@ -260,7 +260,7 @@ namespace Pico
                 {
                     
                     UnityWebRequest webRequest = UnityWebRequest.Get(NetEnvHelper.GetFullRequestUrl(NetEnvHelper.SampleTokenApi));
-                    webRequest.timeout = 10; // 设置超时时间为10秒
+                    webRequest.timeout = 10; // Set the request timeout to 10 seconds.
                     webRequest.SetRequestHeader("Content-Type", "application/json"); 
                     yield return webRequest.SendWebRequest();
                     if (webRequest.result != UnityWebRequest.Result.Success)

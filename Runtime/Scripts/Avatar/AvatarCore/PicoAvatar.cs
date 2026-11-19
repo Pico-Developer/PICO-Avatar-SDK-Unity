@@ -1114,7 +1114,7 @@ namespace Pico
 			/// <param name="gameTime"></param>
 			internal void PostUpdateFrame(float gameTime)
 			{
-				if (entity != null && entity.nativeEntityId != 0 && entity.isAnyLodReady) //这个为0导致不更新？
+				if (entity != null && entity.nativeEntityId != 0 && entity.isAnyLodReady) // nativeEntityId 0 prevents updates.
 				{
 					entity.PostUpdateFrame(gameTime);
 

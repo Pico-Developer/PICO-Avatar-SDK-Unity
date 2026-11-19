@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 
 namespace Pico
@@ -70,7 +70,7 @@ namespace Pico
 				var costTime = AvatarEnv.realtimeSinceStartup - _statStartTimes[(int)statType];
 				_statCostTimes[(int)statType] = costTime;
 				//
-				// 项目名称[空格][项名][空格]Metrics_1: value_1[空格]Metrics_2: value_2[空格]
+				// Format: project name, item name, and metric key-value pairs separated by spaces.
 				if (logStat)
 				{
 					AvatarEnv.Log(DebugLogMask.ForceLog,
@@ -138,7 +138,7 @@ namespace Pico
 					EmitFinish(StatsType.FirstAvatarVisible, true);
 				}
 
-				// 项目名称[空格][项名][空格]Metrics_1: value_1[空格]Metrics_2: value_2[空格]
+				// Format: project name, item name, and metric key-value pairs separated by spaces.
 				AvatarEnv.Log(DebugLogMask.ForceLog, string.Format("{0} {1} avatarId:{2} lod:{3} cost:{4}"
 					, "AvatarSDK", "AvatarLoad", avatarId, lodLevel.ToString(), costTime));
 			}

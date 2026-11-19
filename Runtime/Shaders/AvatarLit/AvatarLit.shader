@@ -126,7 +126,7 @@ Shader "PicoAvatar/AvatarLit"
 
             //Debug keywords
             #pragma shader_feature_local _DEBUG_NONE  _DEBUG_DIRECTONLY _DEBUG_INDIRECTONLY _DEBUG_METALLIC _DEBUG_ROUGHNESS _DEBUG_NORMAL
-            //注意：如果没有主光源，该feature会被关闭
+            // Note: this feature is disabled when there is no main light.
             //# define  _MAIN_LIGHT_SHADOWS
             
             //Define Keywords

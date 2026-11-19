@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 
 namespace Pico
@@ -43,7 +43,7 @@ namespace Pico
                     m_PreviewUtility.camera.clearFlags = CameraClearFlags.SolidColor;
                     m_PreviewUtility.camera.transform.position = new Vector3(0, 0, -10);
 
-                    // 绘制场景上已经存在的游戏对象
+                    // Preview the existing scene object.
                     m_PreviewInstance = (this.target as PicoAvatarRenderMesh);
 
                     if (m_PreviewInstance.GetComponent<MeshRenderer>())

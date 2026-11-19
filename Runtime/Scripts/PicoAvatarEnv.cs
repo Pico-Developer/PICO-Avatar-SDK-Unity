@@ -180,25 +180,13 @@ namespace Pico
 			}
 
 			// Path of root directory where to place persistent cache data.
+			// Default mode ("false") uses the app sandbox directory (Application.persistentDataPath),
+			// which is writable under Android 11+ scoped storage without any storage permission.
+			// Any other value is treated as a user-specified local resource path.
 			public static string cacheSpacePath
 			{
 				get
 				{
-#if UNITY_ANDROID && !UNITY_EDITOR
-                    if (localModeOrPath == "false"){
-                        if(string.IsNullOrEmpty(Utility.desiredAvatarCacheDirectory))
-                        {
-                            return "/sdcard";    
-                        }
-                        else
-                        {
-                            return Application.persistentDataPath;
-                        }
-                    }
-                    else{
-                        return localModeOrPath;
-                    }
-#else
 					if (localModeOrPath == "false")
 					{
 						return Application.persistentDataPath;
@@ -207,7 +195,6 @@ namespace Pico
 					{
 						return localModeOrPath;
 					}
-#endif
 				}
 			}
 

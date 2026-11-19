@@ -300,7 +300,7 @@ namespace Pico
     }
 }
 #else
-using Unity.XR.PXR;
+using ByteDance.PICO.XR;
 using System.Threading;
 
 namespace Pico
@@ -440,9 +440,9 @@ namespace Pico
 				}
 
 				PXR_Plugin.Controller.UPxr_GetControllerTrackingState((uint)PXR_Input.Controller.LeftController, 0,
-					headData, ref pxrControllerTrackingLeft);
+					ref pxrControllerTrackingLeft);
 				PXR_Plugin.Controller.UPxr_GetControllerTrackingState((uint)PXR_Input.Controller.RightController, 0,
-					headData, ref pxrControllerTrackingRight);
+					ref pxrControllerTrackingRight);
 
 				if (Interlocked.CompareExchange(ref _deviceAccessState, (int)DeviceAccessState.Ready,
 					    (int)DeviceAccessState.Reading) != (int)DeviceAccessState.Reading)

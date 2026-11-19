@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using Unity.XR.PXR;
+using ByteDance.PICO.XR;
 using UnityEngine.XR;
 
 namespace Pico.Avatar.Sample
@@ -34,8 +34,8 @@ namespace Pico.Avatar.Sample
         // Update is called once per frame
         void Update()
         {
-          //  PXR_Plugin.Controller.UPxr_GetControllerTrackingState((uint)PXR_Input.Controller.LeftController, 0, headData, ref pxrControllerTrackingLeft);
-            PXR_Plugin.Controller.UPxr_GetControllerTrackingState((uint)PXR_Input.Controller.RightController, 0, headData, ref pxrControllerTrackingRight);
+          //  PXR_Plugin.Controller.UPxr_GetControllerTrackingState((uint)PXR_Input.Controller.LeftController, 0, ref pxrControllerTrackingLeft);
+            PXR_Plugin.Controller.UPxr_GetControllerTrackingState((uint)PXR_Input.Controller.RightController, 0, ref pxrControllerTrackingRight);
         //    uint leftControllerStatus = (uint)pxrControllerTrackingLeft.localControllerPose.status;
             uint rightControllerStatus = (uint)pxrControllerTrackingRight.localControllerPose.status;
 

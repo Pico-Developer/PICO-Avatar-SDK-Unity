@@ -513,7 +513,7 @@ uint4 encode_block(float4 texels[BLOCK_SIZE])
 	principal_component_analysis(texels, ep0, ep1);
 	//max_accumulation_pixel_direction(texels, ep0, ep1);
 
-	// endpoints_quant是根据整个128bits减去weights的编码占用和其他配置占用后剩余的bits位数来确定的。
+	// endpoints_quant is determined by the remaining bits after weights and other configuration data are packed into 128 bits.
 	// for fast compression!
 #if HAS_ALPHA
 	uint4 best_blockmode = uint4(QUANT_6, QUANT_256, 6, 7);
@@ -550,13 +550,13 @@ uint4 encode_block(float4 texels[BLOCK_SIZE])
 }
 
 
-[numthreads(THREAD_NUM_X, THREAD_NUM_Y, 1)] // 一个group里的thread数目
+[numthreads(THREAD_NUM_X, THREAD_NUM_Y, 1)] // Thread count in one group.
 void MainCS(
-	// 一个thread处理一个block
-	uint3 Gid : SV_GroupID,				// dispatch里的group坐标
-	uint3 GTid : SV_GroupThreadID,		// group里的thread坐标
+	// One thread handles one block.
+	uint3 Gid : SV_GroupID,				// Group coordinates in the dispatch.
+	uint3 GTid : SV_GroupThreadID,		// Thread coordinates in the group.
 	uint3 DTid : SV_DispatchThreadID,	// DispatchThreadID = (GroupID X numthreads) + GroupThreadID
-	uint Gidx : SV_GroupIndex)			// group里的thread坐标展开后的索引
+	uint Gidx : SV_GroupIndex)			// Flattened thread index in the group.
 {
 	uint blockID = DTid.y * InGroupNumX * THREAD_NUM_X + DTid.x;
 	uint BlockNum = (InTexelWidth + DIM - 1) / DIM;
@@ -580,4 +580,3 @@ void MainCS(
 	}
 	OutBuffer[InOffset + blockID] = encode_block(texels);
 }
-

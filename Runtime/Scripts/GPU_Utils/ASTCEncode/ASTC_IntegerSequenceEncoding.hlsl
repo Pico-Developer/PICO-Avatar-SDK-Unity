@@ -93,7 +93,7 @@ uint compute_ise_bitcount(uint items, int range)
 }
 
 
-// 把number的低bitcount位写到bytes的bitoffset偏移处开始的位置
+// Write the lower bitcount bits of number into bytes starting at bitoffset.
 // number must be <= 255; bitcount must be <= 8
 void orbits8_ptr(inout uint4 outputs, inout uint bitoffset, uint number, uint bitcount)
 {
@@ -274,4 +274,3 @@ void bise_weights(uint numbers[16], int range, inout uint4 outputs)
 	}
 
 }
-

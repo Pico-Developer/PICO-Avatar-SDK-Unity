@@ -1,4 +1,4 @@
-﻿namespace Pico.Avatar
+namespace Pico.Avatar
 {
 	/// <summary>
 	/// server type. boe or not
@@ -63,7 +63,7 @@
 	};
 	
 	/// <summary>
-	/// nation type. china or oversea
+	/// nation type. Values match the AvatarSDK/NationType editor menu order: CN=1, US=2, Other=3.
 	/// </summary>
 	public enum NationType : uint
 	{
@@ -72,13 +72,18 @@
 		/// </summary>
 		Unknown = 0,
 		/// <summary>
-		/// China
+		/// China (CN)
 		/// </summary>
-		China = 1,
+		CN = 1,
 
 		/// <summary>
-		/// Oversea
+		/// US (TTP)
 		/// </summary>
-		Oversea = 2,
+		US = 2,
+
+		/// <summary>
+		/// Other / Oversea (ROW)
+		/// </summary>
+		Other = 3,
 	};
 }

@@ -1,4 +1,4 @@
-﻿#ifndef PAV_BASE_INCLUDED
+#ifndef PAV_BASE_INCLUDED
 #define PAV_BASE_INCLUDED
 
 /** SurfaceInput
@@ -89,7 +89,7 @@ _DETAIL       TEXTURE2D(_DetailNormalMap);    SAMPLER(sampler_DetailNormalMap);
 #endif
 
 
-////////////////////////////////////顶点数据替换/////////////////////////////////////////////////////////////
+//////////////////////////////////// Vertex data replacement /////////////////////////////////////////////////////////////
 
 //struct Attributes
 //{
@@ -225,7 +225,7 @@ ByteAddressBuffer _outputBuffer;
 #endif
 
 
-//////////////////////////////////// AvatarBunch 顶点数据替换 /////////////////////////////////////////////////////////////
+//////////////////////////////////// AvatarBunch vertex data replacement /////////////////////////////////////////////////////////////
 #if defined(PAV_AVATAR_BUNCH) && defined(INSTANCING_ON)
 
 // position/normal/tangent interpolaped data
@@ -360,4 +360,3 @@ inline void pavGpuInstanceSkinVertexP(int instanceId, int vid, inout float4 posi
 #endif
 
 #endif // file
-
